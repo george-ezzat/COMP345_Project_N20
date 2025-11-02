@@ -26,7 +26,7 @@ GameEngine::GameEngine() {
     players = new std::vector<Player*>();
 }
 
-// Copy constructor
+//copy constructor
 GameEngine::GameEngine(const GameEngine& other) {
     states = new std::string[8];
     transitions = new std::string[11];
@@ -43,7 +43,7 @@ GameEngine::GameEngine(const GameEngine& other) {
     observers = other.observers;
 }
 
-// Assignment operator
+//assignment operator
 GameEngine& GameEngine::operator=(const GameEngine& other) {
     if (this != &other) {
         delete[] states;
@@ -92,15 +92,15 @@ std::ostream& operator<<(std::ostream& os, const GameEngine& engine) {
     return os;
 }
 
-// Validate if a command is allowed in the current state
+//validate if a command is allowed in the current state
 bool GameEngine::validateCommand(const std::string& command) const {
     switch (*currentState) {
     case 0: // start
-        return command.rfind("loadmap", 0) == 0; // Check if command starts with "loadmap"
+        return command.rfind("loadmap", 0) == 0; //if command starts with "loadmap"
     case 1: // map loaded
         return command.rfind("loadmap", 0) == 0 || command == "validatemap";
     case 2: // map validated
-        return command.rfind("addplayer", 0) == 0; // Check if command starts with "addplayer"
+        return command.rfind("addplayer", 0) == 0; //if command starts with "addplayer"
     case 3: // players added
         return command.rfind("addplayer", 0) == 0 || command == "assigncountries";
     case 4: // assign reinforcement
@@ -116,7 +116,7 @@ bool GameEngine::validateCommand(const std::string& command) const {
     }
 }
 
-// Execute a command and transition to the appropriate state
+//execute command and transition to thestate
 bool GameEngine::executeCommand(const std::string& command) {
     if (!validateCommand(command)) {
         std::cout << "Invalid command '" << command << "' for current state '"
@@ -273,33 +273,208 @@ bool GameEngine::executeCommand(const std::string& command) {
     return false;
 }
 
-// Get the current state as a string
+//get current state as string
 std::string GameEngine::getCurrentState() const {
     return states[*currentState];
 }
 
-// Print the current state to console
 void GameEngine::printCurrentState() const {
     std::cout << "Current state: " << states[*currentState] << std::endl;
 }
 
-// Add an observer to the observer list
+// add observer to the observer list
 void GameEngine::addObserver(Observer* observer) {
     observers.push_back(observer);
 }
 
-// Remove an observer from the observer list
+// remove observer from the observer list
 void GameEngine::removeObserver(Observer* observer) {
     observers.erase(std::remove(observers.begin(), observers.end(), observer), observers.end());
 }
 
-// Notify all observers of state changes
+// notify observers of state changes
 void GameEngine::notify() {
     for (auto observer : observers) {
     }
 }
 
-// Generate log string for the current game engine state
+
 std::string GameEngine::stringToLog() const {
     return "GameEngine State Change: Current state is " + states[*currentState];
+}
+
+//new methods for a2 part 3
+
+void GameEngine::reinforcementPhase() {
+    std::cout << "\n=== REINFORCEMENT PHASE ===" << std::endl;
+    
+    for (Player* player : *players) {
+        int territoriesOwned = player->getTerritories()->size();
+        int reinforcements = std::max(3, territoriesOwned / 3);
+        
+        player->addReinforcement(reinforcements);
+        
+        std::cout << player->getName() << " receives " << reinforcements 
+                  << " reinforcements (owns " << territoriesOwned << " territories)" << std::endl;
+    }
+}
+
+void GameEngine::issueOrdersPhase() {
+    std::cout << "\n=== ISSUE ORDERS PHASE ===" << std::endl;
+    
+    //track which players are done issuing orders
+    std::vector<bool> playersDone(players->size(), false);
+    int roundCount = 0;
+    
+    while (roundCount < 10) {  // put a max of 10 rounds per turn to not overflow terminal, making this for engine driver testing purposes
+        roundCount++;
+        bool anyPlayerIssued = false;
+        
+        std::cout << "\nIssue Orders Round " << roundCount << ":" << std::endl;
+        
+        for (size_t i = 0; i < players->size(); i++) {
+            Player* player = (*players)[i];
+            
+            //skip if player is done
+            if (playersDone[i]) {
+                continue;
+            }
+            
+            //check if player can still issue orders
+            bool canIssue = false;
+            
+            //if has reinforcements, can issue
+            if (player->getReinforcementPool() > 0) {
+                canIssue = true;
+            }
+            //can issue if has armies to move
+            else if (!player->getTerritories()->empty()) {
+                for (Territory* t : *(player->getTerritories())) {
+                    if (t->getArmies() > 1) {
+                        canIssue = true;
+                        break;
+                    }
+                }
+            }
+            //can issue if has cards
+            else if (player->getHand() && !player->getHand()->getHandCards().empty()) {
+                canIssue = true;
+            }
+            
+            if (canIssue) {
+                player->issueOrder();
+                anyPlayerIssued = true;
+            } else {
+                playersDone[i] = true;
+                std::cout << player->getName() << " is done issuing orders" << std::endl;
+            }
+        }
+        
+        //if all players are done, stop
+        if (!anyPlayerIssued) {
+            std::cout << "\nAll players done issuing orders" << std::endl;
+            break;
+        }
+    }
+}
+
+void GameEngine::executeOrdersPhase() {
+    std::cout << "\n=== EXECUTE ORDERS PHASE ===" << std::endl;
+    
+    //execute all deploy orders first
+    std::cout << "\nExecuting Deploy orders:" << std::endl;
+    for (Player* player : *players) {
+        std::vector<Order*>* orders = player->getOrdersList()->getOrders();
+        for (size_t i = 0; i < orders->size(); ) {
+            Order* order = (*orders)[i];
+            if (dynamic_cast<Deploy*>(order)) {
+                std::cout << "Executing " << player->getName() << "'s deploy order" << std::endl;
+                order->execute();
+                player->getOrdersList()->remove(i);
+            } else {
+                i++;
+            }
+        }
+    }
+    
+    //execute other orders (round robin style)
+    std::cout << "\nExecuting other orders:" << std::endl;
+    bool hasOrders = true;
+    while (hasOrders) {
+        hasOrders = false;
+        for (Player* player : *players) {
+            std::vector<Order*>* orders = player->getOrdersList()->getOrders();
+            if (!orders->empty()) {
+                Order* order = (*orders)[0];
+                std::cout << "Executing " << player->getName() << "'s " 
+                          << *order << std::endl;
+                order->execute();
+                player->getOrdersList()->remove(0);
+                hasOrders = true;
+            }
+        }
+    }
+}
+
+void GameEngine::mainGameLoop() {
+    std::cout << "\n========== MAIN GAME LOOP STARTED ==========" << std::endl;
+    
+    if (!gameMap || players->size() < 2) {
+        std::cout << "Cannot start game: need valid map and at least 2 players" << std::endl;
+        return;
+    }
+    
+    //for testing, give each player territories and armies
+    std::vector<Territory*> allTerritories = gameMap->getTerritories();
+    for (size_t i = 0; i < allTerritories.size(); i++) {
+        Player* owner = (*players)[i % players->size()];
+        allTerritories[i]->setOwner(owner);
+        allTerritories[i]->setArmies(5);
+        owner->addTerritory(allTerritories[i]);
+    }
+    
+    int turnCount = 0;
+    int maxTurns = 10;  //limit turns for testing (as i said above)
+    
+    while (turnCount < maxTurns) {
+        turnCount++;
+        std::cout << "\n\n########## TURN " << turnCount << " ##########" << std::endl;
+        
+        reinforcementPhase();
+      
+        issueOrdersPhase();
+        
+        executeOrdersPhase();
+        
+        //remove players with no territories
+        std::cout << "\n=== Checking for eliminated players ===" << std::endl;
+        for (auto it = players->begin(); it != players->end(); ) {
+            if ((*it)->getTerritories()->empty()) {
+                std::cout << (*it)->getName() << " has been eliminated!" << std::endl;
+                it = players->erase(it);
+            } else {
+                ++it;
+            }
+        }
+        
+        //win condition
+        if (players->size() == 1) {
+            std::cout << "\n\n********** GAME OVER **********" << std::endl;
+            std::cout << (*players)[0]->getName() << " WINS!" << std::endl;
+            std::cout << "********************************" << std::endl;
+            return;
+        }
+        
+        //check if one player owns all territories
+        for (Player* player : *players) {
+            if (player->getTerritories()->size() == allTerritories.size()) {
+                std::cout << "\n\n********** GAME OVER **********" << std::endl;
+                std::cout << player->getName() << " WINS (owns all territories)!" << std::endl;
+                std::cout << "********************************" << std::endl;
+                return;
+            }
+        }
+    }
+    
+    std::cout << "\n\nGame ended after " << maxTurns << " turns (testing limit reached)" << std::endl;
 }
