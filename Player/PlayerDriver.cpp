@@ -20,12 +20,6 @@ void testPlayers() {
     for (auto t : *attackList) {
         std::cout << " - " << t->getName() << std::endl;
     }
-
-    p1->issueOrder("Advance");
-    std::cout << "Orders issued by " << p1->getName() << ":" << std::endl;
-    for (auto order : *(p1->getOrdersList()->getOrders())) {
-        std::cout << " - " << *order << std::endl;
-    }
-
+    
     delete p1;
 }
