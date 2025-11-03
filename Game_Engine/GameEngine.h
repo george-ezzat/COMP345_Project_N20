@@ -40,13 +40,12 @@ public:
     void notify();
     std::string stringToLog() const;
     
-    // new methods for a2 part 3
+    // New Methods for A2 part 3
     void mainGameLoop();
     void reinforcementPhase();
     void issueOrdersPhase();
     void executeOrdersPhase();
     
-   
     std::vector<Player*>* getPlayers() { return players; }
     Map* getMap() { return gameMap; }
 };

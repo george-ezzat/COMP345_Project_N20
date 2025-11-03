@@ -14,7 +14,7 @@ Player::Player(const Player& other)
     ordersList = new OrdersList(*other.ordersList);
     hand = other.hand ? new WarzoneCard::Hand(*other.hand) : nullptr;
     territories = new std::vector<Territory*>(*other.territories);
-    reinforcementPool = new int(*other.reinforcementPool);  
+    reinforcementPool = new int(*other.reinforcementPool); //A2 NEW Line
 }
 
 Player& Player::operator=(const Player& other) {
@@ -28,7 +28,7 @@ Player& Player::operator=(const Player& other) {
         ordersList = new OrdersList(*other.ordersList);
         hand = other.hand ? new WarzoneCard::Hand(*other.hand) : nullptr;
         territories = new std::vector<Territory*>(*other.territories);
-        reinforcementPool = new int(*other.reinforcementPool);  
+        reinforcementPool = new int(*other.reinforcementPool); // A2 NEW Line
     }
     return *this;
 }
@@ -37,7 +37,7 @@ Player::~Player() {
     delete ordersList;
     delete hand;
     delete territories;
-    delete reinforcementPool;  // NEW
+    delete reinforcementPool;  // A2 NEW Line
 }
 
 std::string Player::getName() const {
@@ -56,7 +56,15 @@ OrdersList* Player::getOrdersList() const {
     return ordersList;
 }
 
+void Player::addTerritory(Territory* t) {
+    territories->push_back(t);
+}
 
+void Player::setHand(WarzoneCard::Hand* h) {
+    hand = h;
+}
+
+// A2 new Getter, Setter , Method
 int Player::getReinforcementPool() const {
     return *reinforcementPool;
 }
@@ -67,14 +75,6 @@ void Player::setReinforcementPool(int amount) {
 
 void Player::addReinforcement(int amount) {
     *reinforcementPool += amount;
-}
-
-void Player::addTerritory(Territory* t) {
-    territories->push_back(t);
-}
-
-void Player::setHand(WarzoneCard::Hand* h) {
-    hand = h;
 }
 
 std::vector<Territory*>* Player::toDefend() {

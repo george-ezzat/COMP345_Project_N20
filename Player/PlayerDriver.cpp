@@ -20,8 +20,6 @@ void testPlayers() {
     for (auto t : *attackList) {
         std::cout << " - " << t->getName() << std::endl;
     }
-
-
-
+    
     delete p1;
 }

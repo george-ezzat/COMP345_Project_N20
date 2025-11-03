@@ -55,19 +55,3 @@ void testMainGameLoop() {
     
     std::cout << "\n=== Main Game Loop Test Complete ===" << std::endl;
 }
-
-#ifndef MAIN_DRIVER_INCLUDED
-int main() {
-    std::cout << "1. Test Game States (A1)\n2. Test Main Game Loop (A2 part 3)\nChoice: ";
-    int choice;
-    std::cin >> choice;
-    std::cin.ignore();
-    
-    if (choice == 1) {
-        testGameStates();
-    } else {
-        testMainGameLoop();
-    }
-    return 0;
-}
-#endif

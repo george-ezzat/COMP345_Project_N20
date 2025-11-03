@@ -12,7 +12,7 @@ class Player {
         std::vector<Territory*>* territories;
         WarzoneCard::Hand* hand;
         OrdersList* ordersList;
-        int* reinforcementPool;  
+        int* reinforcementPool; // A2 new attribute
 
     public:
         Player(const std::string& name);
@@ -24,11 +24,13 @@ class Player {
         std::vector<Territory*>* getTerritories() const;
         WarzoneCard::Hand* getHand() const;
         OrdersList* getOrdersList() const;
+        void addTerritory(Territory* t);
+        void setHand(WarzoneCard::Hand* h);
+
+        // A2 new Getter, Setter , Method
         int getReinforcementPool() const; 
         void setReinforcementPool(int amount);  
         void addReinforcement(int amount);  
-        void addTerritory(Territory* t);
-        void setHand(WarzoneCard::Hand* h);
 
         std::vector<Territory*>* toDefend();        
         std::vector<Territory*>* toAttack();        
