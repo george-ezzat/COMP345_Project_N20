@@ -151,6 +151,11 @@ private:
     std::vector<Order *> *orders;
 };
 
+/* Part 1 driver placeholder kept for reference
 void testOrdersLists();
+*/
+
+void testOrderExecution();      // Test function demonstrating order execution
+void resetOrderTurnState();     // Resets turn-specific state for orders (e.g., negotiations)
 
 #endif

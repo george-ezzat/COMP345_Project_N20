@@ -2,6 +2,10 @@
 
 #include <sstream>
 #include <algorithm>
+#include <set>
+#include <utility>
+
+#include "..\\Cards\\Cards.h"
 
 #include "..\\Player\\Player.h"
 #include "..\\Map\\Map.h"
@@ -14,6 +18,109 @@ using std::ostringstream;
 static std::string safeDeref(const std::string *p) {
     if (p) return *p;
     return std::string("(null)");
+}
+
+// Anonymous namespace for internal helper functions and state
+namespace {
+    using PlayerPair = std::pair<Player*, Player*>;     // pair of players involved in negotiation
+
+    static std::set<PlayerPair> gNegotiatedPairs;  // set of player pairs with active negotiations
+    static std::set<Player*> gPlayersGrantedCard;     // set of players who have been granted a card
+    static Player* gNeutralPlayer = nullptr;    // singleton neutral player
+
+    // Create a consistent ordering for a player pair
+    static PlayerPair makePair(Player* a, Player* b) {
+        // Ensure the first player is always the "lesser" one
+        if (a < b) {
+            return {a, b};
+        }
+        return {b, a};
+    }
+
+    // Check if there is an active negotiation between two players
+    static bool hasNegotiation(Player* a, Player* b) {
+        if (!a || !b) {
+            return false;
+        }
+        return gNegotiatedPairs.count(makePair(a, b)) > 0;  // Check both orderings
+    }
+
+    // Check if two territories are adjacent
+    static bool isAdjacent(Territory* from, Territory* to) {
+        if (!from || !to) {
+            return false;
+        }
+        for (Territory* neighbor : from->getAdjacents()) {  // Iterate through adjacent territories
+            if (neighbor == to) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Check if a player owns a specific territory
+    static bool playerOwnsTerritory(Player* player, Territory* territory) {
+        if (!player || !territory) {        // Null checks
+            return false;
+        }
+        std::vector<Territory*>* owned = player->getTerritories();  // Get owned territories
+        for (Territory* t : *owned) {       // Iterate through owned territories
+            if (t == territory) {    
+                return true;        // Found the territory
+            }
+        }
+        return false;           // Not found
+    }
+
+    // Remove a territory from a player's ownership
+    static void removeTerritoryFromPlayer(Player* player, Territory* territory) {
+        if (!player || !territory) {        // Null checks
+            return;
+        }
+        std::vector<Territory*>* owned = player->getTerritories();      // Get owned territories
+        for (auto it = owned->begin(); it != owned->end(); ++it) {      // Iterate through owned territories
+            if (*it == territory) {     // Found the territory  
+                owned->erase(it);       // Remove the territory
+                break;
+            }
+        }
+    }
+
+    // Check if a territory is adjacent to any territory owned by a player
+    static bool territoryTouchesPlayer(Territory* territory, Player* player) {
+        if (!territory || !player) {    // Null checks
+            return false;
+        }
+        for (Territory* owned : *player->getTerritories()) {        // Iterate through owned territories
+            if (isAdjacent(owned, territory)) {     // Adjacent found
+                return true;
+            }
+        }
+        return false;           // Not found
+    }
+
+    // Ensure the singleton neutral player exists
+    static void ensureNeutralPlayerExists() {
+        if (!gNeutralPlayer) {
+            gNeutralPlayer = new Player("Neutral");     // Create neutral player if it doesn't exist
+        }
+    }
+
+    // Grant a reinforcement card to a player for conquering a territory this turn
+    static void grantCardForConquest(Player* player) {
+        if (!player) {      // Null check
+            return;
+        }
+        if (gPlayersGrantedCard.count(player) > 0) {        // Already granted a card this turn
+            return;
+        }
+        if (!player->getHand()) {
+            player->setHand(new WarzoneCard::Hand());       // Create a hand if none exists
+        }
+        // Grant the reinforcement card
+        player->getHand()->addCardToHand(new WarzoneCard::Card(WarzoneCard::CardType::Reinforcement));
+        gPlayersGrantedCard.insert(player);     // Mark player as granted
+    }
 }
 
 // Default constructor - creates an order with unknown type
@@ -109,6 +216,7 @@ Deploy::~Deploy() {
 
 // Validate deploy order - checks if territory and army count are valid
 bool Deploy::validate() {
+    /* Part 1 validation logic kept for reference
     if (!territory) {
         *effect = "Invalid: no territory specified";
         return false;
@@ -118,10 +226,30 @@ bool Deploy::validate() {
         return false;
     }
     return true;
+    */
+
+    if (!issuer) {
+        *effect = "Invalid: no issuing player";     // Check for issuing player
+        return false;
+    }
+    if (!territory) {
+        *effect = "Invalid: no territory specified";        // Check for specified territory
+        return false;
+    }
+    if (!armies || *armies <= 0) {
+        *effect = "Invalid: non-positive armies";       // Check for positive army count
+        return false;
+    }
+    if (territory->getOwner() != issuer) {
+        *effect = "Invalid: territory not owned by issuer";     // Check ownership
+        return false;
+    }
+    return true;
 }
 
 // Execute deploy order - adds armies to the specified territory
 void Deploy::execute() {
+    /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
         return;
@@ -135,6 +263,24 @@ void Deploy::execute() {
        << " (" << before << " -> " << territory->getArmies() << ")";
     *effect = ss.str();
     *executed = true;
+    */
+
+    if (!validate()) {
+        *executed = false;
+        return;
+    }
+
+    int before = territory->getArmies();        // Current armies on territory
+    int deployAmount = *armies;                 // Amount to deploy
+    territory->setArmies(before + deployAmount);        // Update territory armies
+
+    // Log the effect of the deployment
+    ostringstream ss;
+    ss << "Deploy: " << issuer->getName() << " placed " << deployAmount
+       << " armies on " << territory->getName() << " (" << before << " -> "
+       << territory->getArmies() << ")";
+    *effect = ss.str();     // Set effect description
+    *executed = true;       // Mark as executed
 }
 
 Order *Deploy::clone() const {
@@ -178,6 +324,7 @@ Advance::~Advance() {
 
 // Validate advance order - checks if territories and army count are valid
 bool Advance::validate() {
+    /* Part 1 validation logic kept for reference
     if (!source || !destination) {
         *effect = "Invalid: missing source or destination";
         return false;
@@ -187,10 +334,49 @@ bool Advance::validate() {
         return false;
     }
     return true;
+    */
+
+    if (!issuer) {
+        *effect = "Invalid: no issuing player";     // Check for issuing player
+        return false;
+    }
+    if (!source || !destination) {
+        *effect = "Invalid: missing source or destination";     // Check for specified territories
+        return false;
+    }
+    if (source == destination) {
+        *effect = "Invalid: source and destination are the same";       // Check for different territories
+        return false;
+    }
+    if (!armies || *armies <= 0) {
+        *effect = "Invalid: non-positive armies";       // Check for positive army count
+        return false;
+    }
+    if (source->getOwner() != issuer) {
+        *effect = "Invalid: source territory not owned by issuer";     // Check ownership
+        return false;
+    }
+    if (!isAdjacent(source, destination)) {
+        *effect = "Invalid: territories are not adjacent";       // Check adjacency
+        return false;
+    }
+    if (*armies > source->getArmies()) {
+        *effect = "Invalid: not enough armies in source";       // Check for sufficient armies
+        return false;
+    }
+
+    // Check for negotiation between issuer and defender
+    Player* defender = destination->getOwner();
+    if (defender && defender != issuer && hasNegotiation(issuer, defender)) {
+        *effect = "Invalid: negotiation in effect";     // Negotiation blocks attack
+        return false;
+    }
+    return true;
 }
 
 // Execute advance order - moves armies from source to target territory
 void Advance::execute() {
+    /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
         return;
@@ -209,6 +395,77 @@ void Advance::execute() {
        << " (" << sourceBefore << "->" << source->getArmies() << ") to "
        << destination->getName() << " (" << destBefore << "->" << destination->getArmies() << ")";
     *effect = ss.str();
+    *executed = true;
+    */
+
+    if (!validate()) {
+        *executed = false;
+        return;
+    }
+
+    int sourceBefore = source->getArmies();     // Current armies in source territory
+    int moveCount = std::min(*armies, sourceBefore);        // Armies to move
+    source->setArmies(sourceBefore - moveCount);            // Update source territory armies
+
+    Player* defender = destination->getOwner();         // Get defender player
+    bool friendlyMove = (defender == issuer);           // Check if move is friendly
+
+    if (friendlyMove) {
+        int destBefore = destination->getArmies();      // Current armies in destination territory
+        destination->setArmies(destBefore + moveCount);   // Update destination territory armies
+
+        // Log the effect of the friendly move
+        ostringstream ss;
+        ss << "Advance: moved " << moveCount << " armies from "
+           << source->getName() << " (" << sourceBefore << " -> "
+           << source->getArmies() << ") to " << destination->getName()
+           << " (" << destBefore << " -> " << destination->getArmies() << ")";
+        *effect = ss.str();
+        *executed = true;
+        return;
+    }
+    // Combat resolution for hostile advance
+    int defendersBefore = destination->getArmies();         // Current armies in destination territory
+    int attackKills = std::min(defendersBefore, (moveCount * 6) / 10);      // Attackers kill 60%
+    int defendKills = std::min(moveCount, (defendersBefore * 7) / 10);      // Defenders kill 70%
+    int defendersLeft = defendersBefore - attackKills;      // Remaining defenders
+    int attackersLeft = moveCount - defendKills;        // Remaining attackers
+
+    // Log the outcome of the combat
+    if (defendersLeft <= 0) {           // Attackers conquered the territory
+        if (defender) {
+            removeTerritoryFromPlayer(defender, destination);       // Remove territory from defender
+        }
+        destination->setOwner(issuer);              // Set new owner to issuer
+        if (!playerOwnsTerritory(issuer, destination)) {        // Add territory to issuer if not already owned
+            issuer->addTerritory(destination);      // Add territory to issuer
+        }
+        int occupyingArmies = (attackersLeft > 0) ? attackersLeft : 1;      // At least 1 army must occupy
+        destination->setArmies(occupyingArmies);        // Set occupying armies
+        grantCardForConquest(issuer);           // Grant card for conquest
+
+        // Log the effect of the conquest
+        ostringstream ss;
+        ss << "Advance: " << issuer->getName() << " conquered "
+           << destination->getName() << " by moving " << moveCount
+           << " armies. Defenders were " << defendersBefore
+           << " and " << defendKills << " attackers were lost. "
+           << "New owner holds " << destination->getArmies() << " armies.";
+        *effect = ss.str();
+    } else {        // Attack failed, update armies accordingly
+        destination->setArmies(defendersLeft);
+        if (attackersLeft > 0) {
+            source->setArmies(source->getArmies() + attackersLeft);  // Return surviving attackers
+        }
+
+        ostringstream ss;
+        ss << "Advance: attack on " << destination->getName()
+           << " failed. Defenders now " << defendersLeft
+           << ", attackers returned " << (attackersLeft > 0 ? attackersLeft : 0)
+           << ".";
+        *effect = ss.str();
+    }
+
     *executed = true;
 }
 
@@ -240,8 +497,29 @@ Bomb::~Bomb() {
 
 // Validate bomb order - checks if target territory is valid
 bool Bomb::validate() {
+    /* Part 1 validation logic kept for reference
     if (!target) {
         *effect = "Invalid: no target";
+        return false;
+    }
+    return true;
+    */
+
+    if (!issuer) {
+        *effect = "Invalid: no issuing player";         // Check for issuing player
+        return false;
+    }
+    if (!target) {
+        *effect = "Invalid: no target";     // Check for specified target
+        return false;
+    }
+    Player* owner = target->getOwner();
+    if (!owner || owner == issuer) {
+        *effect = "Invalid: target not owned by an enemy";      // Check that target is owned by an enemy
+        return false;
+    }
+    if (!territoryTouchesPlayer(target, issuer)) {
+        *effect = "Invalid: no adjacent territory";     // Check adjacency to issuer's territories
         return false;
     }
     return true;
@@ -249,6 +527,7 @@ bool Bomb::validate() {
 
 // Execute bomb order - destroys half the armies on target territory
 void Bomb::execute() {
+    /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
         return;
@@ -259,6 +538,23 @@ void Bomb::execute() {
 
     ostringstream ss;
     ss << "Bombed " << target->getName() << " (" << before << "->" << after << ")";
+    *effect = ss.str();
+    *executed = true;
+    */
+
+    if (!validate()) {
+        *executed = false;
+        return;
+    }
+
+    int before = target->getArmies();       // Current armies on target territory
+    int after = before / 2;          // Armies after bombing
+    target->setArmies(after);       // Update territory armies
+
+    // Log the effect of the bombing
+    ostringstream ss;
+    ss << "Bomb: " << issuer->getName() << " halved armies on "
+       << target->getName() << " (" << before << " -> " << after << ")";
     *effect = ss.str();
     *executed = true;
 }
@@ -309,6 +605,7 @@ bool Blockade::validate() {
 
 // Execute blockade order - doubles armies and transfers territory to neutral
 void Blockade::execute() {
+    /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
         return;
@@ -325,6 +622,31 @@ void Blockade::execute() {
 
     ostringstream ss;
     ss << "Blockaded " << target->getName() << " (" << before << "->" << target->getArmies() << ") and owner set to neutral";
+    *effect = ss.str();
+    *executed = true;
+    */
+
+    if (!validate()) {
+        *executed = false;
+        return;
+    }
+
+    ensureNeutralPlayerExists();        // Ensure neutral player exists
+
+    int before = target->getArmies();       // Current armies on target territory
+    target->setArmies(before * 2);      // Double the armies
+
+    removeTerritoryFromPlayer(issuer, target);      // Remove territory from issuer
+    target->setOwner(gNeutralPlayer);       // Set neutral as new owner
+    if (!playerOwnsTerritory(gNeutralPlayer, target)) {     // Add territory to neutral if not already owned
+        gNeutralPlayer->addTerritory(target);       // Add territory to neutral player
+    }
+
+    // Log the effect of the blockade
+    ostringstream ss;
+    ss << "Blockade: " << issuer->getName() << " doubled armies on "
+       << target->getName() << " (" << before << " -> " << target->getArmies()
+       << ") and handed it to Neutral";
     *effect = ss.str();
     *executed = true;
 }
@@ -367,6 +689,7 @@ Airlift::~Airlift() {
 
 // Validate airlift order - checks if territories and army count are valid
 bool Airlift::validate() {
+    /* Part 1 validation logic kept for reference
     if (!source || !destination) {
         *effect = "Invalid: missing source/destination";
         return false;
@@ -376,10 +699,34 @@ bool Airlift::validate() {
         return false;
     }
     return true;
+    */
+
+    if (!issuer) {
+        *effect = "Invalid: no issuing player";     // Check for issuing player
+        return false;
+    }
+    if (!source || !destination) {
+        *effect = "Invalid: missing source/destination";        // Check for specified territories
+        return false;
+    }
+    if (!armies || *armies <= 0) {
+        *effect = "Invalid: non-positive armies";       // Check for positive army count
+        return false;
+    }
+    if (source->getOwner() != issuer || destination->getOwner() != issuer) {
+        *effect = "Invalid: source or destination not owned by issuer";    // Check ownership
+        return false;
+    }
+    if (*armies > source->getArmies()) {
+        *effect = "Invalid: not enough armies in source";    // Check for sufficient armies
+        return false;
+    }
+    return true;
 }
 
 // Execute airlift order - moves armies between any owned territories
 void Airlift::execute() {
+    /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
         return;
@@ -396,6 +743,28 @@ void Airlift::execute() {
     ss << "Airlifted " << moveCount << " from " << source->getName()
        << " (" << srcBefore << "->" << source->getArmies() << ") to "
        << destination->getName() << " (" << destBefore << "->" << destination->getArmies() << ")";
+    *effect = ss.str();
+    *executed = true;
+    */
+
+    if (!validate()) {
+        *executed = false;
+        return;
+    }
+
+    int srcBefore = source->getArmies();        // Current armies in source territory
+    int moveCount = std::min(*armies, srcBefore);       // Armies to move
+    source->setArmies(srcBefore - moveCount);         // Update source territory armies
+
+    int destBefore = destination->getArmies();      // Current armies in destination territory
+    destination->setArmies(destBefore + moveCount);     // Update destination territory armies
+
+    // Log the effect of the airlift
+    ostringstream ss;
+    ss << "Airlift: moved " << moveCount << " armies from " << source->getName()
+       << " (" << srcBefore << " -> " << source->getArmies() << ") to "
+       << destination->getName() << " (" << destBefore << " -> "
+       << destination->getArmies() << ")";
     *effect = ss.str();
     *executed = true;
 }
@@ -428,8 +797,24 @@ Negotiate::~Negotiate() {
 
 // Validate negotiate order - checks if target player is valid and different
 bool Negotiate::validate() {
+    /* Part 1 validation logic kept for reference
     if (!targetPlayer) {
         *effect = "Invalid: no player";
+        return false;
+    }
+    return true;
+    */
+
+    if (!issuer) {
+        *effect = "Invalid: no issuing player";     // Check for issuing player
+        return false;
+    }
+    if (!targetPlayer) {
+        *effect = "Invalid: no player";     // Check for specified target player
+        return false;
+    }
+    if (targetPlayer == issuer) {
+        *effect = "Invalid: cannot negotiate with self";        // Cannot negotiate with self
         return false;
     }
     return true;
@@ -437,6 +822,7 @@ bool Negotiate::validate() {
 
 // Execute negotiate order - prevents attacks between players for this turn
 void Negotiate::execute() {
+    /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
         return;
@@ -444,6 +830,21 @@ void Negotiate::execute() {
 
     ostringstream ss;
     ss << "Negotiated peace with " << targetPlayer->getName();
+    *effect = ss.str();
+    *executed = true;
+    */
+
+    if (!validate()) {
+        *executed = false;
+        return;
+    }
+
+    gNegotiatedPairs.insert(makePair(issuer, targetPlayer));        // Record the negotiation
+
+    // Log the effect of the negotiation
+    ostringstream ss;
+    ss << "Negotiate: " << issuer->getName() << " and "
+       << targetPlayer->getName() << " agreed to temporary peace";
     *effect = ss.str();
     *executed = true;
 }
@@ -539,6 +940,12 @@ ostream &operator<<(ostream &os, const OrdersList &ol) {
         }
     }
     return os;
+}
+
+// Reset the order turn state at the end of a turn
+void resetOrderTurnState() {
+    gNegotiatedPairs.clear();       // Clear negotiated pairs
+    gPlayersGrantedCard.clear();    // Clear players granted cards
 }
 
 
