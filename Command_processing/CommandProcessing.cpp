@@ -65,14 +65,12 @@ CommandProcessor::CommandProcessor(const CommandProcessor& other) {
     commands = new std::vector<Command*>();
     currentIndex = new int(*(other.currentIndex));
     
-    // Deep copy all commands
     for (Command* cmd : *(other.commands)) {
         commands->push_back(new Command(*cmd));
     }
 }
 
 CommandProcessor::~CommandProcessor() {
-    // Delete all stored commands
     for (Command* cmd : *commands) {
         delete cmd;
     }
@@ -83,13 +81,11 @@ CommandProcessor::~CommandProcessor() {
 
 CommandProcessor& CommandProcessor::operator=(const CommandProcessor& other) {
     if (this != &other) {
-        // Delete existing commands
         for (Command* cmd : *commands) {
             delete cmd;
         }
         commands->clear();
         
-        // Copy new commands
         for (Command* cmd : *(other.commands)) {
             commands->push_back(new Command(*cmd));
         }
@@ -108,7 +104,6 @@ std::string CommandProcessor::readCommandInternal() {
     std::cout << "Enter command: ";
     std::getline(std::cin, input);
     
-    // Trim whitespace
     input.erase(0, input.find_first_not_of(" \t\n\r"));
     input.erase(input.find_last_not_of(" \t\n\r") + 1);
     
@@ -122,14 +117,12 @@ void CommandProcessor::saveCommand(Command* cmd) {
 }
 
 Command* CommandProcessor::getCommand() {
-    // Read a new command from input
     std::string cmdStr = readCommand();
     
     if (cmdStr.empty()) {
         return nullptr;
     }
     
-    // Create new command and save it
     Command* cmd = new Command(cmdStr);
     saveCommand(cmd);
     
@@ -143,16 +136,13 @@ bool CommandProcessor::validate(Command* cmd, GameState currentState) {
     
     std::string cmdStr = cmd->getCommandString();
     
-    // Trim and convert to lowercase for comparison
     std::string lowerCmd = cmdStr;
     std::transform(lowerCmd.begin(), lowerCmd.end(), lowerCmd.begin(), ::tolower);
     
-    // Extract command name (first word)
     std::istringstream iss(lowerCmd);
     std::string commandName;
     iss >> commandName;
     
-    // Validate based on current state
     bool isValid = false;
     std::string errorMsg = "";
     std::string successMsg = "";
@@ -160,7 +150,6 @@ bool CommandProcessor::validate(Command* cmd, GameState currentState) {
     switch (currentState) {
         case GameState::START:
             if (commandName == "loadmap") {
-                // Check if filename is provided
                 std::string filename;
                 iss >> filename;
                 if (filename.empty()) {
@@ -246,8 +235,6 @@ bool CommandProcessor::validate(Command* cmd, GameState currentState) {
             break;
             
         case GameState::ASSIGN_REINFORCEMENT:
-            // In assignreinforcement state, game is in play
-            // Commands like replay and quit are valid
             if (commandName == "replay") {
                 isValid = true;
                 successMsg = "Replaying game; state->start";
@@ -274,13 +261,11 @@ bool CommandProcessor::validate(Command* cmd, GameState currentState) {
             break;
             
         case GameState::EXIT:
-            // No commands valid in exit state
             errorMsg = "Command '" + commandName + "' invalid in state 'exit program'. Game has ended.";
             isValid = false;
             break;
     }
     
-    // Save effect message
     if (isValid) {
         cmd->saveEffect(successMsg);
     } else {
@@ -364,19 +349,15 @@ FileCommandProcessorAdapter::FileCommandProcessorAdapter(const std::string& file
         return;
     }
     
-    // Pre-read all commands from file and store them
     std::string line;
     while (std::getline(*fileStream, line)) {
-        // Trim whitespace
         line.erase(0, line.find_first_not_of(" \t\n\r"));
         line.erase(line.find_last_not_of(" \t\n\r") + 1);
         
-        // Skip empty lines and comment lines (lines starting with #)
         if (line.empty() || line[0] == '#') {
             continue;
         }
         
-        // Create and save command
         Command* cmd = new Command(line);
         saveCommand(cmd);
     }
@@ -391,7 +372,7 @@ FileCommandProcessorAdapter::FileCommandProcessorAdapter(const FileCommandProces
     : CommandProcessor(other) {
     filename = new std::string(*(other.filename));
     fileReadComplete = new bool(*(other.fileReadComplete));
-    fileStream = nullptr; // File already read in original
+    fileStream = nullptr;
 }
 
 FileCommandProcessorAdapter::~FileCommandProcessorAdapter() {
@@ -413,21 +394,15 @@ FileCommandProcessorAdapter& FileCommandProcessorAdapter::operator=(const FileCo
 }
 
 Command* FileCommandProcessorAdapter::getCommand() {
-    // Return next command from pre-read list
-    if (currentIndex < commands->size()) {
+    if (*currentIndex < (int)commands->size()) {
         Command* cmd = (*commands)[*currentIndex];
         (*currentIndex)++;
         return cmd;
     }
-    return nullptr; // No more commands
+    return nullptr;
 }
 
 std::string FileCommandProcessorAdapter::readCommandInternal() {
-    // Commands are already pre-read in constructor
-    // This method should not be called, but return empty if file reading is complete
-    if (*fileReadComplete) {
-        return "";
-    }
     return "";
 }
 

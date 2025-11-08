@@ -185,7 +185,6 @@ std::string getStateName(GameState state) {
     }
 }
 
-// Minimal main/test harness
 int main(int argc, char* argv[]) {
     std::cout << "Command Processing Driver" << std::endl;
     std::cout << "Usage: " << argv[0] << " [-console | -file <filename>]" << std::endl;
@@ -214,7 +213,6 @@ int main(int argc, char* argv[]) {
             if (cmdStr == "quit") {
                 processor->validate(cmd, currentState);
                 std::cout << cmd->getEffect() << std::endl;
-                // Don't delete cmd - it's managed by processor
                 break;
             }
             

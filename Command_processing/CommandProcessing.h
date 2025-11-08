@@ -55,15 +55,13 @@ public:
  */
 class CommandProcessor {
 private:
-    std::vector<Command*>* commands;
-    
     // Private methods
     std::string readCommand();
 
 protected:
-    int* currentIndex;  // Protected so derived classes can access
-    void saveCommand(Command* cmd);  // Protected so derived classes can use it
-    // Protected method for derived classes to override readCommand
+    std::vector<Command*>* commands;
+    int* currentIndex;
+    void saveCommand(Command* cmd);
     virtual std::string readCommandInternal();
 
 public:
@@ -72,7 +70,7 @@ public:
     CommandProcessor(const CommandProcessor& other);
     
     // Destructor
-    ~CommandProcessor();
+    virtual ~CommandProcessor();
     
     // Assignment operator
     CommandProcessor& operator=(const CommandProcessor& other);
@@ -109,13 +107,8 @@ public:
     // Assignment operator
     FileCommandProcessorAdapter& operator=(const FileCommandProcessorAdapter& other);
     
-    // Override getCommand to return pre-read commands from file
     Command* getCommand() override;
-    
-    // Override readCommand to read from file (not used, but required)
     std::string readCommandInternal() override;
-    
-    // Check if file reading is complete
     bool isFileReadComplete() const;
 };
 
