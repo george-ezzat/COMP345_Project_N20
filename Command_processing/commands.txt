@@ -1,0 +1,8 @@
+# Sample command file for testing
+loadmap world.map
+validatemap
+addplayer Alice
+addplayer Bob
+gamestart
+quit
+
