@@ -23,7 +23,7 @@ void testLoggingObserver();
 #include "Orders/OrdersDriver.cpp"
 #include "Player/PlayerDriver.cpp"
 #include "Game_Engine/GameEngineDriver.cpp"
-#include "LoggingObserverDriver.cpp"
+#include "Logging/LoggingObserverDriver.cpp"
 
 int main() {
     std::cout << "\n==================== MAIN DRIVER ====================" << std::endl;
