@@ -2,10 +2,12 @@
 #include <iostream>
 #include <algorithm>
 #include <sstream>
+#include <random>
 
 #include "../Map/Map.h" 
 #include "../Cards/Cards.h"
-#include "../Player/Player.h" 
+#include "../Player/Player.h"
+#include "../Command_processing/CommandProcessing.h" 
 
 GameEngine::GameEngine() {
     states = new std::string[8]{
@@ -295,7 +297,187 @@ std::string GameEngine::stringToLog() const {
     return "GameEngine State Change: Current state is " + states[*currentState];
 }
 
-//new methods for a2 part 3
+void GameEngine::startupPhase() {
+    std::cout << "\n========== GAME STARTUP PHASE ==========" << std::endl;
+    
+    CommandProcessor* processor = new CommandProcessor();
+    GameState currentCmdState = GameState::START;
+    bool startupComplete = false;
+    
+    while (!startupComplete) {
+        printCurrentState();
+        
+        Command* cmd = processor->getCommand();
+        
+        if (cmd == nullptr) {
+            continue;
+        }
+        
+        std::string commandStr = cmd->getCommandString();
+        
+        if (commandStr == "help") {
+            std::cout << "\nAvailable commands based on current state:" << std::endl;
+            if (currentCmdState == GameState::START) {
+                std::cout << "  loadmap <filename> - Load a map file" << std::endl;
+            } else if (currentCmdState == GameState::MAP_LOADED) {
+                std::cout << "  loadmap <filename> - Load a different map file" << std::endl;
+                std::cout << "  validatemap - Validate the loaded map" << std::endl;
+            } else if (currentCmdState == GameState::MAP_VALIDATED) {
+                std::cout << "  addplayer <playername> - Add a player (2-6 players required)" << std::endl;
+            } else if (currentCmdState == GameState::PLAYERS_ADDED) {
+                std::cout << "  addplayer <playername> - Add another player (max 6)" << std::endl;
+                std::cout << "  gamestart - Start the game (requires 2-6 players)" << std::endl;
+            }
+            continue;
+        }
+        
+        if (!processor->validate(cmd, currentCmdState)) {
+            std::cout << "Invalid command: " << cmd->getEffect() << std::endl;
+            continue;
+        }
+        
+        std::cout << "Command validated: " << cmd->getEffect() << std::endl;
+        
+        std::stringstream ss(commandStr);
+        std::string cmdName;
+        ss >> cmdName;
+        
+        bool success = false;
+        if (cmdName == "loadmap") {
+            std::string filename;
+            ss >> filename;
+            
+            MapLoader loader;
+            Map* loadedMap = loader.loadMap(filename);
+            
+            if (loadedMap) {
+                if (gameMap != nullptr) delete gameMap;
+                gameMap = loadedMap;
+                std::cout << "Map '" << filename << "' loaded successfully." << std::endl;
+                transition(1);
+                currentCmdState = GameState::MAP_LOADED;
+                success = true;
+            } else {
+                std::cout << "Error: Failed to load map '" << filename << "'." << std::endl;
+                cmd->saveEffect("Failed to load map file: " + filename);
+            }
+        }
+        else if (cmdName == "validatemap") {
+            if (gameMap != nullptr && gameMap->validate()) {
+                std::cout << "Map validated successfully." << std::endl;
+                transition(2);
+                currentCmdState = GameState::MAP_VALIDATED;
+                success = true;
+            } else {
+                std::cout << "Error: Map validation failed." << std::endl;
+                cmd->saveEffect("Map validation failed");
+            }
+        }
+        else if (cmdName == "addplayer") {
+            std::string playerName;
+            ss >> playerName;
+            
+            if (players->size() >= 6) {
+                std::cout << "Error: Maximum of 6 players allowed." << std::endl;
+                cmd->saveEffect("Maximum of 6 players reached");
+                continue;
+            }
+            
+            Player* newPlayer = new Player(playerName);
+            players->push_back(newPlayer);
+            std::cout << "Player '" << playerName << "' added. Total players: " << players->size() << std::endl;
+            transition(3);
+            currentCmdState = GameState::PLAYERS_ADDED;
+            success = true;
+        }
+        else if (cmdName == "gamestart") {
+            if (players->size() < 2) {
+                std::cout << "Error: At least 2 players are required to start the game." << std::endl;
+                cmd->saveEffect("Need at least 2 players to start");
+                continue;
+            }
+            
+            if (players->size() > 6) {
+                std::cout << "Error: Maximum of 6 players allowed." << std::endl;
+                cmd->saveEffect("Too many players");
+                continue;
+            }
+            
+            std::cout << "\n=== Starting Game Setup ===" << std::endl;
+            
+            std::cout << "\n4a) Distributing territories to players..." << std::endl;
+            std::vector<Territory*> allTerritories = gameMap->getTerritories();
+            
+            if (allTerritories.empty()) {
+                std::cout << "Error: No territories available on the map." << std::endl;
+                cmd->saveEffect("No territories on map");
+                continue;
+            }
+            
+            std::random_device rd;
+            std::mt19937 g(rd());
+            std::shuffle(allTerritories.begin(), allTerritories.end(), g);
+            
+            for (size_t i = 0; i < allTerritories.size(); i++) {
+                Player* owner = (*players)[i % players->size()];
+                allTerritories[i]->setOwner(owner);
+                allTerritories[i]->setArmies(0);
+                owner->addTerritory(allTerritories[i]);
+            }
+            
+            for (Player* player : *players) {
+                std::cout << "  " << player->getName() << " owns " 
+                          << player->getTerritories()->size() << " territories" << std::endl;
+            }
+            
+            std::cout << "\n4b) Determining random order of play..." << std::endl;
+            std::shuffle(players->begin(), players->end(), g);
+            
+            std::cout << "  Order of play:" << std::endl;
+            for (size_t i = 0; i < players->size(); i++) {
+                std::cout << "    " << (i + 1) << ". " << (*players)[i]->getName() << std::endl;
+            }
+            
+            std::cout << "\n4c) Giving 50 initial army units to each player..." << std::endl;
+            for (Player* player : *players) {
+                player->setReinforcementPool(50);
+                std::cout << "  " << player->getName() << " has 50 armies in reinforcement pool" << std::endl;
+            }
+            
+            std::cout << "\n4d) Each player draws 2 initial cards from the deck..." << std::endl;
+            for (Player* player : *players) {
+                for (int i = 0; i < 2; i++) {
+                    if (gameDeck->drawToHand(player->getHand())) {
+                        std::cout << "  " << player->getName() << " drew a card" << std::endl;
+                    } else {
+                        std::cout << "  Warning: No more cards in deck for " << player->getName() << std::endl;
+                    }
+                }
+            }
+            
+            std::cout << "\n4e) Switching to play phase..." << std::endl;
+            transition(4);
+            currentCmdState = GameState::ASSIGN_REINFORCEMENT;
+            cmd->saveEffect("Game started successfully");
+            
+            std::cout << "\n=== Game Setup Complete ===" << std::endl;
+            std::cout << "The game is now ready to begin!" << std::endl;
+            
+            success = true;
+            startupComplete = true;
+        }
+        else if (cmdName == "quit") {
+            std::cout << "Exiting startup phase..." << std::endl;
+            cmd->saveEffect("User quit startup phase");
+            break;
+        }
+        
+        std::cout << std::endl;
+    }
+    
+    delete processor;
+    std::cout << "\n========== STARTUP PHASE COMPLETE ==========" << std::endl;
+}
 
 void GameEngine::reinforcementPhase() {
     std::cout << "\n=== REINFORCEMENT PHASE ===" << std::endl;
