@@ -11,7 +11,8 @@ void testCards();
 void testLoadMaps();
 void testOrdersLists();
 void testPlayers();
-void testGameStates();
+//void testGameStates();
+void testStartupPhase();
 void testMainGameLoop();
 void testLoggingObserver();
 
@@ -56,14 +57,21 @@ int main() {
         std::cout << "Players test failed: " << e.what() << std::endl;
     }
 
-    std::cout << "\n--- Testing Game States ---" << std::endl;
+    /*std::cout << "\n--- Testing Game States ---" << std::endl;
     try {
         testGameStates();
     } catch (const std::exception& e) {
         std::cout << "Testing Game States test failed: " << e.what() << std::endl;
-    }
+    }*/
 
     // A2 tests
+    std::cout << "\n--- Testing Startup Phase (A2 Part 2) ---" << std::endl;
+    try {
+        testStartupPhase();
+    } catch (const std::exception& e) {
+        std::cout << "Startup Phase test failed: " << e.what() << std::endl;
+    }
+
     std::cout << "\n--- Main Game Loop ---" << std::endl;
     try {
         testMainGameLoop();

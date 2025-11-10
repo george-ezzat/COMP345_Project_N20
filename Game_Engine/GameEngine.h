@@ -41,7 +41,7 @@ public:
     void notify();
     std::string stringToLog() const override;
     
-    // New Methods for A2 part 3
+    void startupPhase();
     void mainGameLoop();
     void reinforcementPhase();
     void issueOrdersPhase();
@@ -49,6 +49,7 @@ public:
     
     std::vector<Player*>* getPlayers() { return players; }
     Map* getMap() { return gameMap; }
+    WarzoneCard::Deck* getDeck() { return gameDeck; }
 };
 
 #endif
