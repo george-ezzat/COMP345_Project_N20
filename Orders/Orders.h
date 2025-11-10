@@ -5,12 +5,13 @@
 #include <vector>
 #include <iostream>
 
+#include "../Logging/LoggingObserver.h"
 
 class Player;
 class Territory;
 
 
-class Order {
+class Order : public Subject, public ILoggable {
 public:
     Order();  // Default constructor
     explicit Order(const std::string &type, Player *issuer = nullptr);
@@ -21,6 +22,10 @@ public:
     virtual bool validate() = 0;
     virtual void execute() = 0;
     virtual Order *clone() const = 0;
+    std::string stringToLog() const override;
+    std::string getType() const;
+    std::string getEffectDescription() const;
+    Player* getIssuer() const;
 
     friend std::ostream &operator<<(std::ostream &os, const Order &o);
 
@@ -132,7 +137,7 @@ private:
     Player *targetPlayer;
 };
 
-class OrdersList {
+class OrdersList : public Subject, public ILoggable {
 public:
     OrdersList();
     OrdersList(const OrdersList &other);       
@@ -144,11 +149,16 @@ public:
     bool move(int from, int to);
 
     std::vector<Order *> *getOrders() const;
+    std::string stringToLog() const override;
+    void addObserver(Observer* observer);
+    void removeObserver(Observer* observer);
 
     friend std::ostream &operator<<(std::ostream &os, const OrdersList &ol);
 
 private:
     std::vector<Order *> *orders;
+    Order* mostRecentOrder;
+    std::string* mostRecentAction;
 };
 
 /* Part 1 driver placeholder kept for reference
