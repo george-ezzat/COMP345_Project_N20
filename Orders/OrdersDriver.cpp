@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <cstddef>
 
-#include "..\\Player\\Player.h"
-#include "..\\Map\\Map.h"
-#include "..\\Cards\\Cards.h"
+#include "../Player/Player.h"
+#include "../Map/Map.h"
+#include "../Cards/Cards.h"
 
 /* Part 1 driver kept for reference
 // Test function demonstrating Orders and OrdersList functionality
@@ -67,6 +67,13 @@ static void showHand(const Player& player) {
 
     // Display hand info
     std::cout << "  " << player.getName() << " hand cards=" << count << std::endl;
+}
+
+void testOrderExecution();
+
+void testOrdersLists() {
+    std::cout << "=== Orders List Demo ===" << std::endl;
+    testOrderExecution();
 }
 
 void testOrderExecution() {

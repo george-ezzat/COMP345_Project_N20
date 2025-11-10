@@ -6,17 +6,17 @@
 #include <vector>
 #include <iostream>
 
-class Observer;
+#include "../Logging/LoggingObserver.h"
+
 class Map;
 class Player;
 namespace WarzoneCard { class Deck; }
 
-class GameEngine {
+class GameEngine : public Subject, public ILoggable {
 private:
     std::string* states;
     std::string* transitions;
     int* currentState;
-    std::vector<Observer*> observers;
 
     Map* gameMap;
     WarzoneCard::Deck* gameDeck;
@@ -31,6 +31,7 @@ public:
     bool executeCommand(const std::string& command);
     std::string getCurrentState() const;
     void printCurrentState() const;
+    void transition(int newStateIndex);
 
     GameEngine& operator=(const GameEngine& other);
     friend std::ostream& operator<<(std::ostream& os, const GameEngine& engine);
@@ -38,7 +39,7 @@ public:
     void addObserver(Observer* observer);
     void removeObserver(Observer* observer);
     void notify();
-    std::string stringToLog() const;
+    std::string stringToLog() const override;
     
     // New Methods for A2 part 3
     void mainGameLoop();

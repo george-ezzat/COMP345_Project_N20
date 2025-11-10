@@ -5,10 +5,10 @@
 #include <set>
 #include <utility>
 
-#include "..\\Cards\\Cards.h"
+#include "../Cards/Cards.h"
 
-#include "..\\Player\\Player.h"
-#include "..\\Map\\Map.h"
+#include "../Player/Player.h"
+#include "../Map/Map.h"
 
 using std::string;
 using std::vector;
@@ -170,6 +170,26 @@ Order::~Order() {
     delete executed;
 }
 
+std::string Order::getType() const {
+    return safeDeref(orderType);
+}
+
+std::string Order::getEffectDescription() const {
+    return safeDeref(effect);
+}
+
+Player* Order::getIssuer() const {
+    return issuer;
+}
+
+std::string Order::stringToLog() const {
+    std::string issuerName = "(no issuer)";
+    if (issuer) {
+        issuerName = issuer->getName();
+    }
+    return "Order [" + getType() + "] by " + issuerName + " -> " + getEffectDescription();
+}
+
 ostream &operator<<(ostream &os, const Order &o) {
     os << "Order(" << safeDeref(o.orderType) << ", executed=";
     if (o.executed && *(o.executed)) os << "yes";
@@ -252,6 +272,7 @@ void Deploy::execute() {
     /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
 
@@ -267,6 +288,7 @@ void Deploy::execute() {
 
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
 
@@ -281,6 +303,7 @@ void Deploy::execute() {
        << territory->getArmies() << ")";
     *effect = ss.str();     // Set effect description
     *executed = true;       // Mark as executed
+    notifyObservers();
 }
 
 Order *Deploy::clone() const {
@@ -379,6 +402,7 @@ void Advance::execute() {
     /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
 
@@ -400,6 +424,7 @@ void Advance::execute() {
 
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
 
@@ -422,6 +447,7 @@ void Advance::execute() {
            << " (" << destBefore << " -> " << destination->getArmies() << ")";
         *effect = ss.str();
         *executed = true;
+        notifyObservers();
         return;
     }
     // Combat resolution for hostile advance
@@ -467,6 +493,7 @@ void Advance::execute() {
     }
 
     *executed = true;
+    notifyObservers();
 }
 
 Order *Advance::clone() const {
@@ -530,6 +557,7 @@ void Bomb::execute() {
     /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
     int before = target->getArmies();
@@ -544,6 +572,7 @@ void Bomb::execute() {
 
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
 
@@ -557,6 +586,7 @@ void Bomb::execute() {
        << target->getName() << " (" << before << " -> " << after << ")";
     *effect = ss.str();
     *executed = true;
+    notifyObservers();
 }
 
 Order *Bomb::clone() const {
@@ -608,6 +638,7 @@ void Blockade::execute() {
     /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
 
@@ -628,6 +659,7 @@ void Blockade::execute() {
 
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
 
@@ -649,6 +681,7 @@ void Blockade::execute() {
        << ") and handed it to Neutral";
     *effect = ss.str();
     *executed = true;
+    notifyObservers();
 }
 
 Order *Blockade::clone() const {
@@ -729,6 +762,7 @@ void Airlift::execute() {
     /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
 
@@ -767,6 +801,7 @@ void Airlift::execute() {
        << destination->getArmies() << ")";
     *effect = ss.str();
     *executed = true;
+    notifyObservers();
 }
 
 Order *Airlift::clone() const {
@@ -825,6 +860,7 @@ void Negotiate::execute() {
     /* Part 1 execution logic kept for reference
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
 
@@ -836,6 +872,7 @@ void Negotiate::execute() {
 
     if (!validate()) {
         *executed = false;
+        notifyObservers();
         return;
     }
 
@@ -847,6 +884,7 @@ void Negotiate::execute() {
        << targetPlayer->getName() << " agreed to temporary peace";
     *effect = ss.str();
     *executed = true;
+    notifyObservers();
 }
 
 Order *Negotiate::clone() const {
@@ -855,6 +893,8 @@ Order *Negotiate::clone() const {
 
 OrdersList::OrdersList() {
     orders = new vector<Order *>();
+    mostRecentOrder = nullptr;
+    mostRecentAction = new std::string("OrdersList created.");
 }
 
 // Copy constructor
@@ -863,6 +903,8 @@ OrdersList::OrdersList(const OrdersList &other) {
     for (Order *o : *(other.orders)) {
         orders->push_back(o->clone());
     }
+    mostRecentOrder = nullptr;
+    mostRecentAction = new std::string(*(other.mostRecentAction));
 }
 
 // Assignment operator
@@ -879,6 +921,8 @@ OrdersList &OrdersList::operator=(const OrdersList &other) {
     for (Order *o : *(other.orders)) {
         orders->push_back(o->clone());
     }
+    mostRecentOrder = nullptr;
+    *mostRecentAction = *(other.mostRecentAction);
     return *this;
 }
 
@@ -887,11 +931,20 @@ OrdersList::~OrdersList() {
         delete o;
     }
     delete orders;
+    delete mostRecentAction;
 }
 
 // Add an order to the end of the orders list
 void OrdersList::add(Order *o) {
     orders->push_back(o);
+    mostRecentOrder = o;
+    if (o) {
+        *mostRecentAction = "Added order: " + o->getType();
+        propagateObserversTo(*o);
+    } else {
+        *mostRecentAction = "Attempted to add a null order.";
+    }
+    notifyObservers();
 }
 
 // Remove an order at the specified index from the list
@@ -901,6 +954,9 @@ bool OrdersList::remove(int index) {
     }
     delete (*orders)[index];
     orders->erase(orders->begin() + index);
+    mostRecentOrder = nullptr;
+    *mostRecentAction = "Removed order at index " + std::to_string(index);
+    notifyObservers();
     return true;
 }
 
@@ -922,11 +978,44 @@ bool OrdersList::move(int from, int to) {
     orders->erase(orders->begin() + from);
     orders->insert(orders->begin() + to, itemToMove);
     
+    mostRecentOrder = itemToMove;
+    *mostRecentAction = "Moved order " + itemToMove->getType() + " from " + std::to_string(from) + " to " + std::to_string(to);
+    notifyObservers();
+    
     return true;
 }
 
 vector<Order *> *OrdersList::getOrders() const {
     return orders;
+}
+
+std::string OrdersList::stringToLog() const {
+    if (mostRecentOrder) {
+        std::string issuerName = "(no issuer)";
+        if (mostRecentOrder->getIssuer()) {
+            issuerName = mostRecentOrder->getIssuer()->getName();
+        }
+        return *mostRecentAction + " | Issuer: " + issuerName;
+    }
+    return *mostRecentAction;
+}
+
+void OrdersList::addObserver(Observer* observer) {
+    attach(observer);
+    for (Order* order : *orders) {
+        if (order) {
+            order->attach(observer);
+        }
+    }
+}
+
+void OrdersList::removeObserver(Observer* observer) {
+    for (Order* order : *orders) {
+        if (order) {
+            order->detach(observer);
+        }
+    }
+    detach(observer);
 }
 
 ostream &operator<<(ostream &os, const OrdersList &ol) {

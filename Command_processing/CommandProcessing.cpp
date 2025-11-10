@@ -1,7 +1,8 @@
 #include "CommandProcessing.h"
-#include <sstream>
+
 #include <algorithm>
 #include <cctype>
+#include <sstream>
 
 // ==================== Command Class Implementation ====================
 
@@ -35,6 +36,7 @@ Command& Command::operator=(const Command& other) {
 
 void Command::saveEffect(const std::string& effectStr) {
     *effect = effectStr;
+    notifyObservers();
 }
 
 std::string Command::stringToLog() const {
@@ -59,11 +61,13 @@ std::ostream& operator<<(std::ostream& os, const Command& cmd) {
 CommandProcessor::CommandProcessor() {
     commands = new std::vector<Command*>();
     currentIndex = new int(0);
+    lastCommandLog = new std::string("No command saved yet.");
 }
 
 CommandProcessor::CommandProcessor(const CommandProcessor& other) {
     commands = new std::vector<Command*>();
     currentIndex = new int(*(other.currentIndex));
+    lastCommandLog = new std::string(*(other.lastCommandLog));
     
     for (Command* cmd : *(other.commands)) {
         commands->push_back(new Command(*cmd));
@@ -77,6 +81,7 @@ CommandProcessor::~CommandProcessor() {
     commands->clear();
     delete commands;
     delete currentIndex;
+    delete lastCommandLog;
 }
 
 CommandProcessor& CommandProcessor::operator=(const CommandProcessor& other) {
@@ -91,6 +96,7 @@ CommandProcessor& CommandProcessor::operator=(const CommandProcessor& other) {
         }
         
         *currentIndex = *(other.currentIndex);
+        *lastCommandLog = *(other.lastCommandLog);
     }
     return *this;
 }
@@ -113,6 +119,9 @@ std::string CommandProcessor::readCommandInternal() {
 void CommandProcessor::saveCommand(Command* cmd) {
     if (cmd != nullptr) {
         commands->push_back(cmd);
+        *lastCommandLog = "Saved command: " + cmd->getCommandString();
+        propagateObserversTo(*cmd);
+        notifyObservers();
     }
 }
 
@@ -328,6 +337,28 @@ GameState CommandProcessor::getNextState(Command* cmd, GameState currentState) {
     return currentState;
 }
 
+void CommandProcessor::addObserver(Observer* observer) {
+    attach(observer);
+    for (Command* command : *commands) {
+        if (command) {
+            command->attach(observer);
+        }
+    }
+}
+
+void CommandProcessor::removeObserver(Observer* observer) {
+    for (Command* command : *commands) {
+        if (command) {
+            command->detach(observer);
+        }
+    }
+    detach(observer);
+}
+
+std::string CommandProcessor::stringToLog() const {
+    return *lastCommandLog;
+}
+
 std::ostream& operator<<(std::ostream& os, const CommandProcessor& processor) {
     os << "CommandProcessor: " << processor.commands->size() << " commands stored";
     return os;
@@ -339,33 +370,13 @@ FileCommandProcessorAdapter::FileCommandProcessorAdapter(const std::string& file
     : CommandProcessor() {
     this->filename = new std::string(filename);
     fileReadComplete = new bool(false);
-    
     fileStream = new std::ifstream(filename);
     if (!fileStream->is_open()) {
         *fileReadComplete = true;
         std::cerr << "Error: Could not open file '" << filename << "'" << std::endl;
         delete fileStream;
         fileStream = nullptr;
-        return;
     }
-    
-    std::string line;
-    while (std::getline(*fileStream, line)) {
-        line.erase(0, line.find_first_not_of(" \t\n\r"));
-        line.erase(line.find_last_not_of(" \t\n\r") + 1);
-        
-        if (line.empty() || line[0] == '#') {
-            continue;
-        }
-        
-        Command* cmd = new Command(line);
-        saveCommand(cmd);
-    }
-    
-    *fileReadComplete = true;
-    fileStream->close();
-    delete fileStream;
-    fileStream = nullptr;
 }
 
 FileCommandProcessorAdapter::FileCommandProcessorAdapter(const FileCommandProcessorAdapter& other)
@@ -373,13 +384,23 @@ FileCommandProcessorAdapter::FileCommandProcessorAdapter(const FileCommandProces
     filename = new std::string(*(other.filename));
     fileReadComplete = new bool(*(other.fileReadComplete));
     fileStream = nullptr;
+    if (!filename->empty()) {
+        fileStream = new std::ifstream(*filename);
+        if (!fileStream->is_open()) {
+            delete fileStream;
+            fileStream = nullptr;
+            *fileReadComplete = true;
+        }
+    }
 }
 
 FileCommandProcessorAdapter::~FileCommandProcessorAdapter() {
     delete filename;
     delete fileReadComplete;
-    if (fileStream != nullptr && fileStream->is_open()) {
-        fileStream->close();
+    if (fileStream != nullptr) {
+        if (fileStream->is_open()) {
+            fileStream->close();
+        }
         delete fileStream;
     }
 }
@@ -389,20 +410,58 @@ FileCommandProcessorAdapter& FileCommandProcessorAdapter::operator=(const FileCo
         CommandProcessor::operator=(other);
         *filename = *(other.filename);
         *fileReadComplete = *(other.fileReadComplete);
+        if (fileStream != nullptr) {
+            if (fileStream->is_open()) {
+                fileStream->close();
+            }
+            delete fileStream;
+        }
+        fileStream = nullptr;
+        if (!filename->empty()) {
+            fileStream = new std::ifstream(*filename);
+            if (!fileStream->is_open()) {
+                delete fileStream;
+                fileStream = nullptr;
+                *fileReadComplete = true;
+            }
+        }
     }
     return *this;
 }
 
 Command* FileCommandProcessorAdapter::getCommand() {
-    if (*currentIndex < (int)commands->size()) {
-        Command* cmd = (*commands)[*currentIndex];
-        (*currentIndex)++;
-        return cmd;
+    if (*fileReadComplete) {
+        return nullptr;
     }
-    return nullptr;
+    Command* cmd = CommandProcessor::getCommand();
+    if (!cmd) {
+        *fileReadComplete = true;
+    }
+    return cmd;
 }
 
 std::string FileCommandProcessorAdapter::readCommandInternal() {
+    if (!fileStream || !fileStream->is_open()) {
+        *fileReadComplete = true;
+        return "";
+    }
+
+    std::string line;
+    while (std::getline(*fileStream, line)) {
+        line.erase(0, line.find_first_not_of(" \t\n\r"));
+        if (!line.empty()) {
+            line.erase(line.find_last_not_of(" \t\n\r") + 1);
+        }
+
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
+
+        return line;
+    }
+
+    *fileReadComplete = true;
+    fileStream->close();
     return "";
 }
 

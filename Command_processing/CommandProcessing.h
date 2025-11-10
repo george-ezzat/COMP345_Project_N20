@@ -7,6 +7,8 @@
 #include <iostream>
 #include <fstream>
 
+#include "../Logging/LoggingObserver.h"
+
 /**
  * Enumeration for game states
  */
@@ -23,7 +25,7 @@ enum class GameState {
 /**
  * Command class stores a command string and its effect
  */
-class Command {
+class Command : public Subject, public ILoggable {
 private:
     std::string* commandString;
     std::string* effect;
@@ -42,7 +44,7 @@ public:
     
     // Methods
     void saveEffect(const std::string& effectStr);
-    std::string stringToLog() const;
+    std::string stringToLog() const override;
     std::string getCommandString() const;
     std::string getEffect() const;
     
@@ -53,7 +55,7 @@ public:
 /**
  * CommandProcessor class reads commands from console and validates them
  */
-class CommandProcessor {
+class CommandProcessor : public Subject, public ILoggable {
 private:
     // Private methods
     std::string readCommand();
@@ -61,6 +63,7 @@ private:
 protected:
     std::vector<Command*>* commands;
     int* currentIndex;
+    std::string* lastCommandLog;
     void saveCommand(Command* cmd);
     virtual std::string readCommandInternal();
 
@@ -79,6 +82,9 @@ public:
     virtual Command* getCommand();
     bool validate(Command* cmd, GameState currentState);
     GameState getNextState(Command* cmd, GameState currentState);
+    std::string stringToLog() const override;
+    void addObserver(Observer* observer);
+    void removeObserver(Observer* observer);
     
     // Stream insertion operator
     friend std::ostream& operator<<(std::ostream& os, const CommandProcessor& processor);

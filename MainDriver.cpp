@@ -13,6 +13,7 @@ void testOrdersLists();
 void testPlayers();
 void testGameStates();
 void testMainGameLoop();
+void testLoggingObserver();
 
 #define MAIN_DRIVER_INCLUDED
 
@@ -21,6 +22,7 @@ void testMainGameLoop();
 #include "Orders/OrdersDriver.cpp"
 #include "Player/PlayerDriver.cpp"
 #include "Game_Engine/GameEngineDriver.cpp"
+#include "LoggingObserverDriver.cpp"
 
 int main() {
     std::cout << "\n==================== MAIN DRIVER ====================" << std::endl;
@@ -67,6 +69,13 @@ int main() {
         testMainGameLoop();
     } catch (const std::exception& e) {
         std::cout << "Main Game Loop test failed: " << e.what() << std::endl;
+    }
+   //test the logging observer
+    std::cout << "\n--- Logging Observer ---" << std::endl;
+    try {
+        testLoggingObserver();
+    } catch (const std::exception& e) {
+        std::cout << "Logging Observer test failed: " << e.what() << std::endl;
     }
 
     std::cout << "\n==================== ALL TESTS COMPLETE ====================" << std::endl;

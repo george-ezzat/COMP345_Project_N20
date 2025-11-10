@@ -39,8 +39,6 @@ GameEngine::GameEngine(const GameEngine& other) {
     for (int i = 0; i < 11; i++) {
         transitions[i] = other.transitions[i];
     }
-
-    observers = other.observers;
 }
 
 //assignment operator
@@ -61,8 +59,6 @@ GameEngine& GameEngine::operator=(const GameEngine& other) {
         for (int i = 0; i < 11; i++) {
             transitions[i] = other.transitions[i];
         }
-
-        observers = other.observers;
     }
     return *this;
 }
@@ -138,8 +134,7 @@ bool GameEngine::executeCommand(const std::string& command) {
                 if (gameMap != nullptr) delete gameMap; 
                 gameMap = loadedMap;
                 std::cout << "Map " << filename << " loaded successfully." << std::endl;
-                *currentState = 1;
-                notify();
+                transition(1);
                 return true;
             } else {
                 std::cout << "Error: Failed to load map " << filename << ". Staying in 'start' state." << std::endl;
@@ -151,8 +146,7 @@ bool GameEngine::executeCommand(const std::string& command) {
         if (command == "validatemap") {
             if (gameMap != nullptr && gameMap->validate()) { 
                 std::cout << "Map successfully validated." << std::endl;
-                *currentState = 2;
-                notify();
+                transition(2);
                 return true;
             } else {
                 std::cout << "Map validation FAILED. Staying in 'map loaded' state." << std::endl;
@@ -160,8 +154,7 @@ bool GameEngine::executeCommand(const std::string& command) {
             }
         }
         else if (command == "validatemap") {
-            *currentState = 2;
-            notify();
+            transition(2);
             return true;
         }
     }
@@ -182,16 +175,14 @@ bool GameEngine::executeCommand(const std::string& command) {
             players->push_back(newPlayer);
             std::cout << "Player " << name << " added. Total players: " << players->size() << std::endl;
             
-            *currentState = 3;
-            notify();
+            transition(3);
             return true;
         }
         
         if (command == "gamestart") {
             if (players->size() >= 2) {
                 std::cout << "Game started. Moving to 'players added' state to begin setup." << std::endl;
-                *currentState = 3;
-                notify();
+                transition(3);
                 return true;
             } else {
                 std::cout << "Cannot start game. Need at least 2 players." << std::endl;
@@ -215,53 +206,47 @@ bool GameEngine::executeCommand(const std::string& command) {
             players->push_back(newPlayer);
             std::cout << "Player " << name << " added. Total players: " << players->size() << std::endl;
             
-            notify();
+            notifyObservers();
             return true;
         }
         else if (command == "assigncountries") {
-            *currentState = 4;
-            notify();
+            transition(4);
             return true;
         }
     }
     else if (*currentState == 4) {
         if (command == "issueorder") {
-            *currentState = 5;
-            notify();
+            transition(5);
             return true;
         }
     }
     else if (*currentState == 5) {
         if (command == "issueorder") {
-            notify();
+            notifyObservers();
             return true;
         }
         else if (command == "endissueorders") {
-            *currentState = 6;
-            notify();
+            transition(6);
             return true;
         }
     }
     else if (*currentState == 6) {
         if (command == "execorder") {
-            notify();
+            notifyObservers();
             return true;
         }
         else if (command == "endexecorders") {
-            *currentState = 4;
-            notify();
+            transition(4);
             return true;
         }
         else if (command == "win") {
-            *currentState = 7;
-            notify();
+            transition(7);
             return true;
         }
     }
     else if (*currentState == 7) {
         if (command == "play") {
-            *currentState = 0;
-            notify();
+            transition(0);
             return true;
         }
         else if (command == "end") {
@@ -282,22 +267,29 @@ void GameEngine::printCurrentState() const {
     std::cout << "Current state: " << states[*currentState] << std::endl;
 }
 
+void GameEngine::transition(int newStateIndex) {
+    if (newStateIndex < 0 || newStateIndex >= 8) {
+        std::cerr << "GameEngine::transition - invalid state index: " << newStateIndex << std::endl;
+        return;
+    }
+    *currentState = newStateIndex;
+    notifyObservers();
+}
+
 // add observer to the observer list
 void GameEngine::addObserver(Observer* observer) {
-    observers.push_back(observer);
+    attach(observer);
 }
 
 // remove observer from the observer list
 void GameEngine::removeObserver(Observer* observer) {
-    observers.erase(std::remove(observers.begin(), observers.end(), observer), observers.end());
+    detach(observer);
 }
 
 // notify observers of state changes
 void GameEngine::notify() {
-    for (auto observer : observers) {
-    }
+    notifyObservers();
 }
-
 
 std::string GameEngine::stringToLog() const {
     return "GameEngine State Change: Current state is " + states[*currentState];
