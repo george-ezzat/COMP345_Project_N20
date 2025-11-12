@@ -301,6 +301,9 @@ void GameEngine::startupPhase() {
     std::cout << "\n========== GAME STARTUP PHASE ==========" << std::endl;
     
     CommandProcessor* processor = new CommandProcessor();
+    LogObserver* logObserver = new LogObserver("gamelog.txt");
+    addObserver(logObserver);
+    processor->addObserver(logObserver);
     GameState currentCmdState = GameState::START;
     bool startupComplete = false;
     
@@ -475,7 +478,10 @@ void GameEngine::startupPhase() {
         std::cout << std::endl;
     }
     
+    processor->removeObserver(logObserver);
     delete processor;
+    removeObserver(logObserver);
+    delete logObserver;
     std::cout << "\n========== STARTUP PHASE COMPLETE ==========" << std::endl;
 }
 

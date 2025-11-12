@@ -1,9 +1,9 @@
-#include "Logging/LoggingObserver.h"
-#include "Command_processing/CommandProcessing.h"
-#include "Orders/Orders.h"
-#include "Game_Engine/GameEngine.h"
-#include "Player/Player.h"
-#include "Map/Map.h"
+#include "LoggingObserver.h"
+#include "../Command_processing/CommandProcessing.h"
+#include "../Orders/Orders.h"
+#include "../Game_Engine/GameEngine.h"
+#include "../Player/Player.h"
+#include "../Map/Map.h"
 
 #include <fstream>
 #include <iostream>
@@ -55,7 +55,6 @@ namespace {
 //test the logging observer
 void testLoggingObserver() {
     const std::string logFilename = "gamelog.txt";
-    resetLogFile(logFilename);
     LogObserver logObserver(logFilename);
 
     reportSection("CommandProcessor Logging");
@@ -85,17 +84,7 @@ void testLoggingObserver() {
 
     reportSection("FileCommandProcessorAdapter Logging");
 
-    const std::string commandFile = "logging_commands.txt";
-    {
-        std::ofstream output(commandFile);
-        output << "loadmap world.map\n";
-        output << "validatemap\n";
-        output << "addplayer Bob\n";
-        output << "addplayer Carol\n";
-        output << "gamestart\n";
-        output << "quit\n";
-    }
-
+    const std::string commandFile = "startup_commands.txt";
     FileCommandProcessorAdapter fileProcessor(commandFile);
     fileProcessor.addObserver(&logObserver);
 

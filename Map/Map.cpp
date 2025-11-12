@@ -115,12 +115,21 @@ const std::vector<Territory*>& Map::getTerritories() const { return territories;
 // Validate the map structure for game requirements
 bool Map::validate() const {
     bool graphConnected = isConnectedGraph();
+    bool continentConnected = continentsAreConnected();
     bool uniqueContinents = territoriesHaveUniqueContinent();
-    return graphConnected && uniqueContinents;
+    return graphConnected && continentConnected && uniqueContinents;
 }
 
 static bool isTerritoriesConnected(const std::vector<Territory*>& nodes) {
     if (nodes.empty()) return true;
+    std::unordered_set<int> allowed;
+    allowed.reserve(nodes.size());
+    for (const Territory* t : nodes) {
+        if (t) {
+            allowed.insert(t->getId());
+        }
+    }
+
     std::unordered_set<int> visited;
     std::queue<Territory*> q;
     q.push(nodes[0]);
@@ -129,8 +138,14 @@ static bool isTerritoriesConnected(const std::vector<Territory*>& nodes) {
     while (!q.empty()) {
         Territory* cur = q.front(); q.pop();
         for (auto n : cur->getAdjacents()) {
-            if (visited.count(n->getId()) == 0) {
-                visited.insert(n->getId());
+            if (!n) {
+                continue;
+            }
+            int nid = n->getId();
+            if (allowed.count(nid) == 0) {
+                continue;
+            }
+            if (visited.insert(nid).second) {
                 q.push(n);
             }
         }

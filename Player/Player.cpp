@@ -4,15 +4,15 @@ using namespace std;
 
 Player::Player(const std::string& name) : name(name) {
     ordersList = new OrdersList();
-    hand = nullptr;
+    hand = new WarzoneCard::Hand();
     territories = new std::vector<Territory*>();
-    reinforcementPool = new int(0);  
+    reinforcementPool = new int(0);
 }
 
 Player::Player(const Player& other) 
     : name(other.name) {
     ordersList = new OrdersList(*other.ordersList);
-    hand = other.hand ? new WarzoneCard::Hand(*other.hand) : nullptr;
+    hand = other.hand ? new WarzoneCard::Hand(*other.hand) : new WarzoneCard::Hand();
     territories = new std::vector<Territory*>(*other.territories);
     reinforcementPool = new int(*other.reinforcementPool); //A2 NEW Line
 }
@@ -26,7 +26,7 @@ Player& Player::operator=(const Player& other) {
         delete reinforcementPool;  
         
         ordersList = new OrdersList(*other.ordersList);
-        hand = other.hand ? new WarzoneCard::Hand(*other.hand) : nullptr;
+        hand = other.hand ? new WarzoneCard::Hand(*other.hand) : new WarzoneCard::Hand();
         territories = new std::vector<Territory*>(*other.territories);
         reinforcementPool = new int(*other.reinforcementPool); // A2 NEW Line
     }
