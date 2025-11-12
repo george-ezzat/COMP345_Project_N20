@@ -40,14 +40,13 @@ void testGameStates() {
 
 void testStartupPhase() {
     std::cout << "\n========================================" << std::endl;
-    std::cout << "=== Testing Startup Phase (Part 2) ===" << std::endl;
+    std::cout << "=== Testing Startup Phase ===" << std::endl;
     std::cout << "========================================\n" << std::endl;
     
     // Create game engine
     GameEngine* engine = new GameEngine();
     
     std::cout << "This test demonstrates the startup phase of the game." << std::endl;
-    std::cout << "You will be prompted to:" << std::endl;
     std::cout << "1. Load a map file using 'loadmap <filename>'" << std::endl;
     std::cout << "2. Validate the map using 'validatemap'" << std::endl;
     std::cout << "3. Add 2-6 players using 'addplayer <playername>'" << std::endl;

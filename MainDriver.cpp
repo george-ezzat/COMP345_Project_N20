@@ -65,7 +65,7 @@ int main() {
     }*/
 
     // A2 tests
-    std::cout << "\n--- Testing Startup Phase (A2 Part 2) ---" << std::endl;
+    std::cout << "\n--- Testing Startup Phase  ---" << std::endl;
     try {
         testStartupPhase();
     } catch (const std::exception& e) {
