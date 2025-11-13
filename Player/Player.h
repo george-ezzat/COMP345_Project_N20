@@ -6,16 +6,21 @@
 #include "../Cards/Cards.h"
 #include "../Map/Map.h"
 
+// Forward declaration
+class PlayerStrategy;
+
 class Player {
     private:
         std::string name; 
         std::vector<Territory*>* territories;
         WarzoneCard::Hand* hand;
         OrdersList* ordersList;
-        int* reinforcementPool; // A2 new attribute
+        int* reinforcementPool;
+        PlayerStrategy* strategy; // Added in A3: Strategy pointer for delegation
 
     public:
         Player(const std::string& name);
+        Player(const std::string& name, PlayerStrategy* strat); // Added in A3: Constructor with strategy
         Player(const Player& other);
         Player& operator=(const Player& other);
         ~Player();
@@ -27,10 +32,13 @@ class Player {
         void addTerritory(Territory* t);
         void setHand(WarzoneCard::Hand* h);
 
-        // A2 new Getter, Setter , Method
         int getReinforcementPool() const; 
         void setReinforcementPool(int amount);  
         void addReinforcement(int amount);  
+
+        // Added in A3: Strategy getter and setter
+        PlayerStrategy* getStrategy() const;
+        void setStrategy(PlayerStrategy* strat);
 
         std::vector<Territory*>* toDefend();        
         std::vector<Territory*>* toAttack();        
