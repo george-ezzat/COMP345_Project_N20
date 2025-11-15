@@ -7,7 +7,8 @@
 #include "../Map/Map.h" 
 #include "../Cards/Cards.h"
 #include "../Player/Player.h"
-#include "../Command_processing/CommandProcessing.h" 
+#include "../Command_processing/CommandProcessing.h"
+#include "../PlayerStrategy/PlayerStrategies.h" 
 
 GameEngine::GameEngine() {
     states = new std::string[8]{
@@ -657,4 +658,101 @@ void GameEngine::mainGameLoop() {
     }
     
     std::cout << "\n\nGame ended after " << maxTurns << " turns (testing limit reached)" << std::endl;
+}
+
+// ===================== TOURNAMENT MODE =====================
+void GameEngine::executeTournament(const TournamentParameters& params) {
+    TournamentResults results;
+    results.results.resize(params.mapFiles.size());
+
+    LogObserver* logObserver = new LogObserver("tournament_log.txt");
+    addObserver(logObserver);
+
+    for (size_t m = 0; m < params.mapFiles.size(); ++m) {
+        MapLoader loader;
+        Map* map = loader.loadMap(params.mapFiles[m]);
+        if (!map || !map->validate()) {
+            std::cout << "Skipping invalid map: " << params.mapFiles[m] << std::endl;
+            continue;
+        }
+
+        results.results[m].resize(params.numberOfGames);
+
+        for (int g = 0; g < params.numberOfGames; ++g) {
+            std::string winner = playSingleGameOnMap(map, params.playerStrategies, params.maxTurns);
+            results.results[m][g] = winner;
+            std::cout << "Map " << params.mapFiles[m] << " Game " << g+1 << " winner: " << winner << std::endl;
+        }
+
+        delete map;
+    }
+
+    std::ofstream logFile(logObserver->getLogFilename(), std::ios::app);
+    logFile << "Tournament Summary:\n";
+    for (size_t m = 0; m < results.results.size(); ++m) {
+        logFile << "Map " << params.mapFiles[m] << ": ";
+        for (const auto& winner : results.results[m]) logFile << winner << " ";
+        logFile << "\n";
+    }
+
+    removeObserver(logObserver);
+    delete logObserver;
+}
+
+std::string GameEngine::playSingleGameOnMap(Map* map, const std::vector<std::string>& strategies, int maxTurns) {
+    // Initialize players
+    std::vector<Player*> gamePlayers;
+    for (size_t i = 0; i < strategies.size(); ++i) {
+        Player* player = new Player("Player" + std::to_string(i + 1));
+
+        // Create a concrete strategy object for this player
+        PlayerStrategy* strat = nullptr;
+        if (strategies[i] == "Aggressive") {
+            strat = new AggressivePlayerStrategy(player);
+        } else if (strategies[i] == "Benevolent") {
+            strat = new BenevolentPlayerStrategy(player);
+        } else if (strategies[i] == "Human") {
+            strat = new HumanPlayerStrategy(player);
+        } else if (strategies[i] == "Random") {
+            strat = new RandomPlayerStrategy(player);
+        } else if (strategies[i] == "Cheater") {
+            strat = new CheaterPlayerStrategy(player);
+        }
+
+        player->setStrategy(strat);
+        gamePlayers.push_back(player);
+    }
+
+    // Distribute territories
+    auto territories = map->getTerritories();
+    std::shuffle(territories.begin(), territories.end(), std::mt19937{std::random_device{}()});
+    for (size_t i = 0; i < territories.size(); ++i) {
+        Player* owner = gamePlayers[i % gamePlayers.size()];
+        territories[i]->setOwner(owner);
+        territories[i]->setArmies(1);
+        owner->addTerritory(territories[i]);
+    }
+
+    // Play turns
+    int turn = 0;
+    while (turn < maxTurns) {
+        turn++;
+        for (Player* player : gamePlayers) player->issueOrder();
+
+        int aliveCount = 0;
+        Player* lastPlayer = nullptr;
+        for (Player* player : gamePlayers) {
+            if (!player->getTerritories()->empty()) {
+                aliveCount++;
+                lastPlayer = player;
+            }
+        }
+        if (aliveCount == 1) {
+            for (Player* p : gamePlayers) delete p;
+            return lastPlayer->getName();
+        }
+    }
+
+    for (Player* p : gamePlayers) delete p;
+    return "Draw";
 }
