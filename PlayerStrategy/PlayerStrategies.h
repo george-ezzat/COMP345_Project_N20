@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 
 // Forward declarations
 class Player;
@@ -68,6 +69,42 @@ public:
      * Returns the name of this strategy (for debugging/logging)
      */
     virtual std::string getStrategyName() const = 0;
+};
+
+
+// Human Player Strategy that requires user interaction for all decisions
+ 
+class HumanPlayerStrategy : public PlayerStrategy {
+public:
+    HumanPlayerStrategy();
+    HumanPlayerStrategy(Player* p);
+    HumanPlayerStrategy(const HumanPlayerStrategy& other);
+    HumanPlayerStrategy& operator=(const HumanPlayerStrategy& other);
+    ~HumanPlayerStrategy() override;
+
+    std::vector<Territory*>* toDefend() override;
+    std::vector<Territory*>* toAttack() override;
+    void issueOrder() override;
+    PlayerStrategy* clone() const override;
+    std::string getStrategyName() const override;
+};
+
+
+// Aggressive Player Strategy that focuses on attack
+
+class AggressivePlayerStrategy : public PlayerStrategy {
+public:
+    AggressivePlayerStrategy();
+    AggressivePlayerStrategy(Player* p);
+    AggressivePlayerStrategy(const AggressivePlayerStrategy& other);
+    AggressivePlayerStrategy& operator=(const AggressivePlayerStrategy& other);
+    ~AggressivePlayerStrategy() override;
+
+    std::vector<Territory*>* toDefend() override;
+    std::vector<Territory*>* toAttack() override;
+    void issueOrder() override;
+    PlayerStrategy* clone() const override;
+    std::string getStrategyName() const override;
 };
 
 #endif 

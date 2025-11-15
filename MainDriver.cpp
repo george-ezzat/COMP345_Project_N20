@@ -15,6 +15,7 @@ void testPlayers();
 void testStartupPhase();
 void testMainGameLoop();
 void testLoggingObserver();
+void testPlayerStrategies();
 
 #define MAIN_DRIVER_INCLUDED
 
@@ -24,6 +25,7 @@ void testLoggingObserver();
 #include "Player/PlayerDriver.cpp"
 #include "Game_Engine/GameEngineDriver.cpp"
 #include "Logging/LoggingObserverDriver.cpp"
+#include "PlayerStrategy/PlayerStrategiesDriver.cpp"
 
 int main() {
     std::cout << "\n==================== MAIN DRIVER ====================" << std::endl;
@@ -84,6 +86,14 @@ int main() {
         testLoggingObserver();
     } catch (const std::exception& e) {
         std::cout << "Logging Observer test failed: " << e.what() << std::endl;
+    }
+
+    // A3 tests
+    std::cout << "\n--- Player Strategies ---" << std::endl;
+    try {
+        testPlayerStrategies();
+    } catch (const std::exception& e) {
+        std::cout << "Player Strategies test failed: " << e.what() << std::endl;
     }
 
     std::cout << "\n==================== ALL TESTS COMPLETE ====================" << std::endl;
