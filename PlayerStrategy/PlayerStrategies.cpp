@@ -181,140 +181,154 @@ void HumanPlayerStrategy::issueOrder() {
     }
     
     std::cout << "\n=== " << player->getName() << " (Human) - Issue Order ===" << std::endl;
-    std::cout << "Reinforcement Pool: " << player->getReinforcementPool() << std::endl;
     std::cout << "Available commands:" << std::endl;
     std::cout << "1. deploy <territory_index> <armies> - Deploy armies" << std::endl;
     std::cout << "2. advance <source_index> <dest_index> <armies> - Advance armies" << std::endl;
     std::cout << "3. card - Play a card" << std::endl;
+    std::cout << "4. done - Finish issuing orders" << std::endl;
     
-    std::string command;
-    std::cout << "Enter command: ";
-    std::getline(std::cin, command);
-    
-    std::istringstream iss(command);
-    std::string cmd;
-    iss >> cmd;
-    
-    if (cmd == "deploy") {
-        int terrIndex, armies;
-        if (iss >> terrIndex >> armies) {
-            std::vector<Territory*>* territories = player->getTerritories();
-            if (terrIndex > 0 && terrIndex <= static_cast<int>(territories->size())) {
-                Territory* target = (*territories)[terrIndex - 1];
-                int deployAmount = std::min(armies, player->getReinforcementPool());
-                if (deployAmount > 0) {
-                    Deploy* deployOrder = new Deploy(deployAmount, target, player);
-                    player->getOrdersList()->add(deployOrder);
-                    player->addReinforcement(-deployAmount);
-                    std::cout << "Deploy order issued: " << deployAmount << " armies to " << target->getName() << std::endl;
+    while (true) {
+        std::cout << "\nReinforcement Pool: " << player->getReinforcementPool() << std::endl;
+        std::string command;
+        std::cout << "Enter command: ";
+        std::getline(std::cin, command);
+        
+        // Trim whitespace and convert to lowercase for comparison
+        std::string trimmed = command;
+        trimmed.erase(0, trimmed.find_first_not_of(" \t"));
+        trimmed.erase(trimmed.find_last_not_of(" \t") + 1);
+        std::transform(trimmed.begin(), trimmed.end(), trimmed.begin(), ::tolower);
+        
+        if (trimmed == "done") {
+            std::cout << "Finished issuing orders." << std::endl;
+            break;
+        }
+        
+        std::istringstream iss(command);
+        std::string cmd;
+        iss >> cmd;
+        
+        if (cmd == "deploy") {
+            int terrIndex, armies;
+            if (iss >> terrIndex >> armies) {
+                std::vector<Territory*>* territories = player->getTerritories();
+                if (terrIndex > 0 && terrIndex <= static_cast<int>(territories->size())) {
+                    Territory* target = (*territories)[terrIndex - 1];
+                    int deployAmount = std::min(armies, player->getReinforcementPool());
+                    if (deployAmount > 0) {
+                        Deploy* deployOrder = new Deploy(deployAmount, target, player);
+                        player->getOrdersList()->add(deployOrder);
+                        player->addReinforcement(-deployAmount);
+                        std::cout << "Deploy order issued: " << deployAmount << " armies to " << target->getName() << std::endl;
+                    } else {
+                        std::cout << "Cannot deploy: insufficient reinforcements or invalid amount." << std::endl;
+                    }
                 } else {
-                    std::cout << "Cannot deploy: insufficient reinforcements or invalid amount." << std::endl;
+                    std::cout << "Invalid territory index." << std::endl;
                 }
             } else {
-                std::cout << "Invalid territory index." << std::endl;
+                std::cout << "Invalid deploy command. Use: deploy <territory_index> <armies>" << std::endl;
             }
-        } else {
-            std::cout << "Invalid deploy command. Use: deploy <territory_index> <armies>" << std::endl;
-        }
-    } else if (cmd == "advance") {
-        int sourceIndex, destIndex, armies;
-        if (iss >> sourceIndex >> destIndex >> armies) {
-            std::vector<Territory*>* territories = player->getTerritories();
-            if (sourceIndex > 0 && sourceIndex <= static_cast<int>(territories->size())) {
-                Territory* source = (*territories)[sourceIndex - 1];
-                // Find destination (could be own or enemy territory)
-                Territory* destination = nullptr;
-                
-                // Check if it's one of our territories
-                if (destIndex > 0 && destIndex <= static_cast<int>(territories->size())) {
-                    destination = (*territories)[destIndex - 1];
-                } else {
-                    // Check adjacent territories (both own and enemy)
-                    std::vector<Territory*> adjacentOwn;
-                    std::vector<Territory*> adjacentEnemy;
+        } else if (cmd == "advance") {
+            int sourceIndex, destIndex, armies;
+            if (iss >> sourceIndex >> destIndex >> armies) {
+                std::vector<Territory*>* territories = player->getTerritories();
+                if (sourceIndex > 0 && sourceIndex <= static_cast<int>(territories->size())) {
+                    Territory* source = (*territories)[sourceIndex - 1];
+                    // Find destination (could be own or enemy territory)
+                    Territory* destination = nullptr;
                     
-                    for (Territory* adj : source->getAdjacents()) {
-                        if (adj->getOwner() == player) {
-                            adjacentOwn.push_back(adj);
-                        } else if (adj->getOwner() != nullptr) {
-                            adjacentEnemy.push_back(adj);
-                        }
-                    }
-                    
-                    // destIndex beyond own territories: check adjacent territories
-                    int adjIndex = destIndex - territories->size();
-                    if (adjIndex > 0 && adjIndex <= static_cast<int>(adjacentOwn.size())) {
-                        destination = adjacentOwn[adjIndex - 1];
+                    // Check if it's one of our territories
+                    if (destIndex > 0 && destIndex <= static_cast<int>(territories->size())) {
+                        destination = (*territories)[destIndex - 1];
                     } else {
-                        adjIndex = adjIndex - adjacentOwn.size();
-                        if (adjIndex > 0 && adjIndex <= static_cast<int>(adjacentEnemy.size())) {
-                            destination = adjacentEnemy[adjIndex - 1];
-                        }
-                    }
-                }
-                
-                if (destination && source != destination && source->getArmies() >= armies) {
-                    Advance* advanceOrder = new Advance(armies, source, destination, player);
-                    player->getOrdersList()->add(advanceOrder);
-                    std::cout << "Advance order issued: " << armies << " armies from " 
-                              << source->getName() << " to " << destination->getName() << std::endl;
-                } else {
-                    if (source == destination) {
-                        std::cout << "Invalid advance: cannot advance to the same territory." << std::endl;
-                    } else if (!destination) {
-                        std::cout << "Invalid advance: destination territory not found. ";
-                        std::cout << "Source territory has " << source->getArmies() << " armies." << std::endl;
-                        std::cout << "Available destinations from " << source->getName() << ":" << std::endl;
-                        int idx = 1;
-                        for (Territory* t : *territories) {
-                            if (t != source) {
-                                std::cout << "  " << idx << ". " << t->getName() << " (own)" << std::endl;
-                                idx++;
-                            }
-                        }
+                        // Check adjacent territories (both own and enemy)
+                        std::vector<Territory*> adjacentOwn;
+                        std::vector<Territory*> adjacentEnemy;
+                        
                         for (Territory* adj : source->getAdjacents()) {
-                            if (adj->getOwner() != player && adj->getOwner() != nullptr) {
-                                std::cout << "  " << idx << ". " << adj->getName() << " (enemy)" << std::endl;
-                                idx++;
+                            if (adj->getOwner() == player) {
+                                adjacentOwn.push_back(adj);
+                            } else if (adj->getOwner() != nullptr) {
+                                adjacentEnemy.push_back(adj);
                             }
                         }
-                    } else if (source->getArmies() < armies) {
-                        std::cout << "Invalid advance: source territory only has " << source->getArmies() 
-                                  << " armies, cannot advance " << armies << " armies." << std::endl;
-                    } else {
-                        std::cout << "Invalid advance: insufficient armies or invalid destination." << std::endl;
+                        
+                        // destIndex beyond own territories: check adjacent territories
+                        int adjIndex = destIndex - territories->size();
+                        if (adjIndex > 0 && adjIndex <= static_cast<int>(adjacentOwn.size())) {
+                            destination = adjacentOwn[adjIndex - 1];
+                        } else {
+                            adjIndex = adjIndex - adjacentOwn.size();
+                            if (adjIndex > 0 && adjIndex <= static_cast<int>(adjacentEnemy.size())) {
+                                destination = adjacentEnemy[adjIndex - 1];
+                            }
+                        }
                     }
+                    
+                    if (destination && source != destination && source->getArmies() >= armies) {
+                        Advance* advanceOrder = new Advance(armies, source, destination, player);
+                        player->getOrdersList()->add(advanceOrder);
+                        std::cout << "Advance order issued: " << armies << " armies from " 
+                                  << source->getName() << " to " << destination->getName() << std::endl;
+                    } else {
+                        if (source == destination) {
+                            std::cout << "Invalid advance: cannot advance to the same territory." << std::endl;
+                        } else if (!destination) {
+                            std::cout << "Invalid advance: destination territory not found. ";
+                            std::cout << "Source territory has " << source->getArmies() << " armies." << std::endl;
+                            std::cout << "Available destinations from " << source->getName() << ":" << std::endl;
+                            int idx = 1;
+                            for (Territory* t : *territories) {
+                                if (t != source) {
+                                    std::cout << "  " << idx << ". " << t->getName() << " (own)" << std::endl;
+                                    idx++;
+                                }
+                            }
+                            for (Territory* adj : source->getAdjacents()) {
+                                if (adj->getOwner() != player && adj->getOwner() != nullptr) {
+                                    std::cout << "  " << idx << ". " << adj->getName() << " (enemy)" << std::endl;
+                                    idx++;
+                                }
+                            }
+                        } else if (source->getArmies() < armies) {
+                            std::cout << "Invalid advance: source territory only has " << source->getArmies() 
+                                      << " armies, cannot advance " << armies << " armies." << std::endl;
+                        } else {
+                            std::cout << "Invalid advance: insufficient armies or invalid destination." << std::endl;
+                        }
+                    }
+                } else {
+                    std::cout << "Invalid source territory index." << std::endl;
                 }
             } else {
-                std::cout << "Invalid source territory index." << std::endl;
+                std::cout << "Invalid advance command. Use: advance <source_index> <dest_index> <armies>" << std::endl;
             }
-        } else {
-            std::cout << "Invalid advance command. Use: advance <source_index> <dest_index> <armies>" << std::endl;
-        }
-    } else if (cmd == "card") {
-        if (player->getHand() && !player->getHand()->getHandCards().empty()) {
-            const std::vector<WarzoneCard::Card*>& cards = player->getHand()->getHandCards();
-            std::cout << "Available cards:" << std::endl;
-            for (size_t i = 0; i < cards.size(); i++) {
-                std::cout << "  " << (i + 1) << ". " << *cards[i] << std::endl;
-            }
-            std::cout << "Enter card number to play: ";
-            int cardIndex;
-            std::cin >> cardIndex;
-            std::cin.ignore();
-            if (cardIndex > 0 && cardIndex <= static_cast<int>(cards.size())) {
-                cards[cardIndex - 1]->play(player);
-                player->getHand()->removeCardFromHand(cards[cardIndex - 1]);
-                std::cout << "Card played successfully." << std::endl;
+        } else if (cmd == "card") {
+            if (player->getHand() && !player->getHand()->getHandCards().empty()) {
+                const std::vector<WarzoneCard::Card*>& cards = player->getHand()->getHandCards();
+                std::cout << "Available cards:" << std::endl;
+                for (size_t i = 0; i < cards.size(); i++) {
+                    std::cout << "  " << (i + 1) << ". " << *cards[i] << std::endl;
+                }
+                std::cout << "Enter card number to play: ";
+                int cardIndex;
+                std::cin >> cardIndex;
+                std::cin.ignore();
+                if (cardIndex > 0 && cardIndex <= static_cast<int>(cards.size())) {
+                    cards[cardIndex - 1]->play(player);
+                    player->getHand()->removeCardFromHand(cards[cardIndex - 1]);
+                    std::cout << "Card played successfully." << std::endl;
+                } else {
+                    std::cout << "Invalid card number." << std::endl;
+                }
             } else {
-                std::cout << "Invalid card number." << std::endl;
+                std::cout << "No cards available." << std::endl;
             }
         } else {
-            std::cout << "No cards available." << std::endl;
+            std::cout << "Unknown command. Valid commands: deploy, advance, card, done" << std::endl;
         }
-    } else {
-        std::cout << "Unknown command. Valid commands: deploy, advance, card" << std::endl;
-    }
+    } // end while loop
 }
 
 PlayerStrategy* HumanPlayerStrategy::clone() const {

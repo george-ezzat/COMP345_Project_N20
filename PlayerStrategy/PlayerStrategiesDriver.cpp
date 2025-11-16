@@ -117,7 +117,7 @@ void testPlayerStrategies() {
     humanPlayer2->getHand()->addCardToHand(reinforcementCard);
     
     std::cout << "\nHuman player can now issue orders (requires user input):" << std::endl;
-    std::cout << "Try commands like: deploy 1 3, advance 1 2 2, card" << std::endl;
+    std::cout << "Try commands like: deploy 1 3, advance 1 2 2, card, done" << std::endl;
 
     humanPlayer2->issueOrder();
     
