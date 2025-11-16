@@ -1,5 +1,5 @@
 #include "Player.h"
-#include "PlayerStrategies.h"
+#include "../PlayerStrategy/PlayerStrategies.h"
 
 using namespace std;
 
