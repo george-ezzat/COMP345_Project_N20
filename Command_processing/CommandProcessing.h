@@ -9,9 +9,8 @@
 
 #include "../Logging/LoggingObserver.h"
 
-/**
- * Enumeration for game states
- */
+
+// Enumeration for game states
 enum class GameState {
     START,
     MAP_LOADED,
@@ -22,9 +21,31 @@ enum class GameState {
     EXIT
 };
 
-/**
- * Command class stores a command string and its effect
+/*
+Structure to hold tournament parameters
+M: list of map files (1-5 maps)
+P: list of player strategies (2-4 strategies)
+G: number of games per map (1-5 games)
+D: maximum number of turns per game (10-50 turns)
  */
+struct TournamentData {
+    std::vector<std::string> mapFiles;      // M parameter: 1-5 map files
+    std::vector<std::string> playerStrategies; // P parameter: 2-4 strategies
+    int numberOfGames;                       // G parameter: 1-5 games
+    int maxNumberOfTurns;                    // D parameter: 10-50 turns
+    
+    TournamentData() : numberOfGames(0), maxNumberOfTurns(0) {}
+    
+    bool isValid() const {
+        return !mapFiles.empty() && mapFiles.size() <= 5 &&
+               playerStrategies.size() >= 2 && playerStrategies.size() <= 4 &&
+               numberOfGames >= 1 && numberOfGames <= 5 &&
+               maxNumberOfTurns >= 10 && maxNumberOfTurns <= 50;
+    }
+};
+
+
+// Command class stores a command string and its effect
 class Command : public Subject, public ILoggable {
 private:
     std::string* commandString;
@@ -59,6 +80,14 @@ class CommandProcessor : public Subject, public ILoggable {
 private:
     // Private methods
     std::string readCommand();
+    
+    // Tournament-related private members
+    TournamentData* tournamentData;
+    bool* isTournamentMode;
+    
+    // Helper methods for tournament command parsing
+    bool parseTournamentCommand(const std::string& commandStr, TournamentData& data);
+    bool validateTournamentCommand(const TournamentData& data, std::string& errorMsg);
 
 protected:
     std::vector<Command*>* commands;
@@ -85,6 +114,11 @@ public:
     std::string stringToLog() const override;
     void addObserver(Observer* observer);
     void removeObserver(Observer* observer);
+    
+    // Tournament-related methods
+    bool isTournament() const;
+    TournamentData getTournamentData() const;
+    void clearTournamentData();
     
     // Stream insertion operator
     friend std::ostream& operator<<(std::ostream& os, const CommandProcessor& processor);

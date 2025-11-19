@@ -1,0 +1,22 @@
+* Example tournament commands for testing
+
+* Valid tournament command - typical case
+tournament -M europe.map asia.map -P aggressive benevolent -G 3 -D 25
+
+* Valid tournament command - maximum parameters
+tournament -M map1.map map2.map map3.map map4.map map5.map -P aggressive benevolent neutral cheater -G 5 -D 50
+
+* Valid tournament command - minimum parameters
+tournament -M world.map -P aggressive benevolent -G 1 -D 10
+
+* Valid tournament command - three maps, three strategies
+tournament -M europe.map asia.map africa.map -P aggressive benevolent neutral -G 2 -D 30
+
+* Invalid - too many maps (will fail validation)
+* tournament -M m1.map m2.map m3.map m4.map m5.map m6.map -P aggressive benevolent -G 3 -D 30
+
+* Invalid - only one strategy (will fail validation)
+* tournament -M map.map -P aggressive -G 3 -D 30
+
+* Invalid - turns out of range (will fail validation)
+* tournament -M map.map -P aggressive benevolent -G 3 -D 5
