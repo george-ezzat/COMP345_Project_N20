@@ -139,12 +139,79 @@ void testPlayerStrategies() {
     std::cout << "\n--- Auto Player issueOrder() (automatic) ---" << std::endl;
     autoPlayer->issueOrder();
     std::cout << "Orders issued automatically: " << autoPlayer->getOrdersList()->getOrders()->size() << std::endl;
+
+    // Test 5: Cheater player behavior
+    std::cout << "\n=== 6. Cheater player automatically conquers adjacent territories ===" << std::endl;
+
+    // Setup cheater player and adjacent enemy territories
+    Territory cheaterBase(5, "CheaterBase", &testContinent);
+    Territory Skypiea(6, "Skypiea", &testContinent);
+    Territory Elbaf(7, "Elbaf", &testContinent);
+    Territory reserve(8, "ReserveEnemy", &testContinent);
+
+    // Define adjacencies
+    cheaterBase.addAdjacentTerritory(&Skypiea);
+    cheaterBase.addAdjacentTerritory(&Elbaf);
+    Skypiea.addAdjacentTerritory(&cheaterBase);
+    Elbaf.addAdjacentTerritory(&cheaterBase);
+    Skypiea.addAdjacentTerritory(&reserve);
+    reserve.addAdjacentTerritory(&Skypiea);
+
+    testContinent.addTerritory(&cheaterBase);
+    testContinent.addTerritory(&Skypiea);
+    testContinent.addTerritory(&Elbaf);
+    testContinent.addTerritory(&reserve);
+
+    // Create cheater player
+    CheaterPlayerStrategy* cheaterStrategy = new CheaterPlayerStrategy();
+    Player* cheaterPlayer = new Player("CheaterPlayer", cheaterStrategy);
+    cheaterPlayer->addTerritory(&cheaterBase);
+    cheaterBase.setOwner(cheaterPlayer);
+    cheaterBase.setArmies(5);
+
+    // Setup enemy territories
+    Player* defenderPlayer = new Player("Defender");
+    defenderPlayer->addTerritory(&Skypiea);
+    defenderPlayer->addTerritory(&Elbaf);
+    defenderPlayer->addTerritory(&reserve);
+    Skypiea.setOwner(defenderPlayer);
+    Elbaf.setOwner(defenderPlayer);
+    reserve.setOwner(defenderPlayer);
+    Skypiea.setArmies(3);
+    Elbaf.setArmies(2);
+    reserve.setArmies(4);
+
+    // Function to print ownership of territories
+    auto printOwnership = [&]() {
+        std::cout << "  " << cheaterBase.getName() << " owned by " << (cheaterBase.getOwner() ? cheaterBase.getOwner()->getName() : "None") << std::endl;
+        std::cout << "  " << Skypiea.getName() << " owned by " << (Skypiea.getOwner() ? Skypiea.getOwner()->getName() : "None") << std::endl;
+        std::cout << "  " << Elbaf.getName() << " owned by " << (Elbaf.getOwner() ? Elbaf.getOwner()->getName() : "None") << std::endl;
+        std::cout << "  " << reserve.getName() << " owned by " << (reserve.getOwner() ? reserve.getOwner()->getName() : "None") << std::endl;
+    };
+
+    std::cout << "Before cheating:" << std::endl;
+    printOwnership();
+
+    std::cout << "\nCheater issues orders (turn 1)" << std::endl;
+    cheaterPlayer->issueOrder();
+    printOwnership();
+
+    std::cout << "\nCheater tries to cheat again without new turn" << std::endl;
+    cheaterPlayer->issueOrder();
+    printOwnership();
+
+    std::cout << "\nResetting turn state and issuing cheater orders again" << std::endl;
+    resetOrderTurnState();
+    cheaterPlayer->issueOrder();
+    printOwnership();
     
     // Cleanup
     delete humanPlayer;
     delete aggressivePlayer;
     delete humanPlayer2;
     delete autoPlayer;
+    delete cheaterPlayer;
+    delete defenderPlayer;
     
     std::cout << "=== Strategy Test Complete ===" << std::endl;
 }
