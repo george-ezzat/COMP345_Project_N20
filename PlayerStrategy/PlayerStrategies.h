@@ -107,4 +107,22 @@ public:
     std::string getStrategyName() const override;
 };
 
+
+// Cheater Player Strategy that instantly captures adjacent enemy territories once per turn
+
+class CheaterPlayerStrategy : public PlayerStrategy {
+public:
+    CheaterPlayerStrategy();
+    CheaterPlayerStrategy(Player* p);
+    CheaterPlayerStrategy(const CheaterPlayerStrategy& other);
+    CheaterPlayerStrategy& operator=(const CheaterPlayerStrategy& other);
+    ~CheaterPlayerStrategy() override;
+
+    std::vector<Territory*>* toDefend() override;
+    std::vector<Territory*>* toAttack() override;
+    void issueOrder() override;
+    PlayerStrategy* clone() const override;
+    std::string getStrategyName() const override;
+};
+
 #endif 

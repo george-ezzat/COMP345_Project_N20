@@ -7,6 +7,12 @@
 #include <algorithm>
 #include <sstream>
 #include <limits>
+#include <unordered_set>
+
+namespace {
+    // Tracks which cheater players already executed their auto-conquest this turn
+    std::unordered_set<Player*> gCheatersActedThisTurn;
+}
 
 // Default constructor
 PlayerStrategy::PlayerStrategy() : player(nullptr) {
@@ -505,4 +511,146 @@ PlayerStrategy* AggressivePlayerStrategy::clone() const {
 
 std::string AggressivePlayerStrategy::getStrategyName() const {
     return "Aggressive";
+}
+
+
+// Cheater player strategy
+
+CheaterPlayerStrategy::CheaterPlayerStrategy() : PlayerStrategy() {
+}
+
+// Constructor with player
+CheaterPlayerStrategy::CheaterPlayerStrategy(Player* p) : PlayerStrategy(p) {
+}
+
+// Copy constructor
+CheaterPlayerStrategy::CheaterPlayerStrategy(const CheaterPlayerStrategy& other) : PlayerStrategy(other) {
+}
+
+// Assignment operator
+CheaterPlayerStrategy& CheaterPlayerStrategy::operator=(const CheaterPlayerStrategy& other) {
+    if (this != &other) {
+        PlayerStrategy::operator=(other);
+    }
+    return *this;
+}
+
+// Destructor
+CheaterPlayerStrategy::~CheaterPlayerStrategy() {
+}
+
+// Returns all owned territories to defend
+std::vector<Territory*>* CheaterPlayerStrategy::toDefend() {
+    auto* defendList = new std::vector<Territory*>();       // All territories to defend
+    if (!player || !player->getTerritories()) {
+        return defendList;          // Return empty list if no player or territories
+    }
+
+    for (Territory* t : *player->getTerritories()) {
+        defendList->push_back(t);      // Add all owned territories to defend list
+    }
+    return defendList;      // Return the complete defend list
+}
+
+std::vector<Territory*>* CheaterPlayerStrategy::toAttack() {
+    auto* attackList = new std::vector<Territory*>();       // All territories to attack
+    if (!player || !player->getTerritories()) {
+        return attackList;          // Return empty list if no player or territories
+    }
+
+    // Find all adjacent enemy territories to attack    
+    for (Territory* myTerr : *player->getTerritories()) {
+        for (Territory* adj : myTerr->getAdjacents()) {
+            if (adj->getOwner() == player) {
+                continue;       // Skip own territories
+            }
+            if (std::find(attackList->begin(), attackList->end(), adj) == attackList->end()) {
+                attackList->push_back(adj);     // Add unique enemy territory to attack list
+            }
+        }
+    }
+
+    return attackList;      // Return the complete attack list
+}
+
+// Issues orders to automatically conquer adjacent territories
+void CheaterPlayerStrategy::issueOrder() {
+    if (!player || !player->getTerritories()) {
+        return;     // No player or territories, nothing to do
+    }
+
+    // Check if this cheater has already acted this turn
+    if (gCheatersActedThisTurn.count(player) > 0) {
+        std::cout << player->getName() << " (Cheater) already conquered adjacent territories this turn" << std::endl;
+        return;     // Already acted, skip
+    }
+
+    std::vector<Territory*> targets;        // Adjacent enemy territories to conquer
+
+    // Snapshot owned territories to avoid iterating newly conquered ones in this call
+    std::vector<Territory*> ownedSnapshot = *player->getTerritories();
+    for (Territory* myTerr : ownedSnapshot) {
+        if (!myTerr) {
+            continue;       // Skip null territories
+        }
+        for (Territory* adj : myTerr->getAdjacents()) {
+            if (!adj || adj->getOwner() == player) {
+                continue;       // Skip null or own territories
+            }
+            if (std::find(targets.begin(), targets.end(), adj) == targets.end()) {
+                targets.push_back(adj);
+            }
+        }
+    }
+
+    // No adjacent territories to conquer
+    if (targets.empty()) {
+        std::cout << player->getName() << " (Cheater) has no adjacent territories to conquer" << std::endl;
+        return;
+    }
+
+    // Conquer each target territory
+    for (Territory* target : targets) {
+        if (!target) {
+            continue;
+        }
+
+        // Remove territory from previous owner's list
+        Player* previousOwner = target->getOwner();
+        if (previousOwner) {
+            std::vector<Territory*>* previousOwned = previousOwner->getTerritories();
+            previousOwned->erase(std::remove(previousOwned->begin(), previousOwned->end(), target), previousOwned->end());
+        }
+
+        target->setOwner(player);       // Set new owner to this cheater player
+        if (std::find(player->getTerritories()->begin(), player->getTerritories()->end(), target) == player->getTerritories()->end()) {
+            player->addTerritory(target);       // Add territory to cheater's list if not already present
+        }
+
+        // Log conquest
+        std::cout << player->getName() << " (Cheater) automatically conquered " << target->getName();
+        if (previousOwner) {
+            std::cout << " from " << previousOwner->getName();
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << player->getName() << " (Cheater) finished conquering adjacent territories this turn" << std::endl;
+
+    gCheatersActedThisTurn.insert(player);      // Mark this cheater as having acted this turn
+}
+
+// Clone method
+PlayerStrategy* CheaterPlayerStrategy::clone() const {
+    return new CheaterPlayerStrategy(*this);
+}
+
+// Get strategy name
+std::string CheaterPlayerStrategy::getStrategyName() const {
+    return "Cheater";
+}
+
+// Resets the cheater turn state at the end of each turn
+void resetCheaterTurnState() {
+    gCheatersActedThisTurn.clear();
 }
