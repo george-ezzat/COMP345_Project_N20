@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 
 // Forward declarations
 class Player;
@@ -68,6 +69,103 @@ public:
      * Returns the name of this strategy (for debugging/logging)
      */
     virtual std::string getStrategyName() const = 0;
+};
+
+
+// Human Player Strategy that requires user interaction for all decisions
+ 
+class HumanPlayerStrategy : public PlayerStrategy {
+public:
+    HumanPlayerStrategy();
+    HumanPlayerStrategy(Player* p);
+    HumanPlayerStrategy(const HumanPlayerStrategy& other);
+    HumanPlayerStrategy& operator=(const HumanPlayerStrategy& other);
+    ~HumanPlayerStrategy() override;
+
+    std::vector<Territory*>* toDefend() override;
+    std::vector<Territory*>* toAttack() override;
+    void issueOrder() override;
+    PlayerStrategy* clone() const override;
+    std::string getStrategyName() const override;
+};
+
+
+// Aggressive Player Strategy that focuses on attack
+
+class AggressivePlayerStrategy : public PlayerStrategy {
+public:
+    AggressivePlayerStrategy();
+    AggressivePlayerStrategy(Player* p);
+    AggressivePlayerStrategy(const AggressivePlayerStrategy& other);
+    AggressivePlayerStrategy& operator=(const AggressivePlayerStrategy& other);
+    ~AggressivePlayerStrategy() override;
+
+    std::vector<Territory*>* toDefend() override;
+    std::vector<Territory*>* toAttack() override;
+    void issueOrder() override;
+    PlayerStrategy* clone() const override;
+    std::string getStrategyName() const override;
+};
+
+
+// Cheater Player Strategy that instantly captures adjacent enemy territories once per turn
+
+class CheaterPlayerStrategy : public PlayerStrategy {
+public:
+    CheaterPlayerStrategy();
+    CheaterPlayerStrategy(Player* p);
+    CheaterPlayerStrategy(const CheaterPlayerStrategy& other);
+    CheaterPlayerStrategy& operator=(const CheaterPlayerStrategy& other);
+    ~CheaterPlayerStrategy() override;
+
+    std::vector<Territory*>* toDefend() override;
+    std::vector<Territory*>* toAttack() override;
+    void issueOrder() override;
+    PlayerStrategy* clone() const override;
+    std::string getStrategyName() const override;
+};
+
+
+// Benevolent Player Strategy that focuses on defense and protecting weak territories
+
+class BenevolentPlayerStrategy : public PlayerStrategy {
+public:
+    BenevolentPlayerStrategy();
+    BenevolentPlayerStrategy(Player* p);
+    BenevolentPlayerStrategy(const BenevolentPlayerStrategy& other);
+    BenevolentPlayerStrategy& operator=(const BenevolentPlayerStrategy& other);
+    ~BenevolentPlayerStrategy() override;
+
+    std::vector<Territory*>* toDefend() override;
+    std::vector<Territory*>* toAttack() override;
+    void issueOrder() override;
+    PlayerStrategy* clone() const override;
+    std::string getStrategyName() const override;
+    
+    friend std::ostream& operator<<(std::ostream& os, const BenevolentPlayerStrategy& strategy);
+};
+
+
+// Neutral Player Strategy that does nothing unless attacked
+
+class NeutralPlayerStrategy : public PlayerStrategy {
+private:
+    int* previousTerritoryCount;
+
+public:
+    NeutralPlayerStrategy();
+    NeutralPlayerStrategy(Player* p);
+    NeutralPlayerStrategy(const NeutralPlayerStrategy& other);
+    NeutralPlayerStrategy& operator=(const NeutralPlayerStrategy& other);
+    ~NeutralPlayerStrategy() override;
+
+    std::vector<Territory*>* toDefend() override;
+    std::vector<Territory*>* toAttack() override;
+    void issueOrder() override;
+    PlayerStrategy* clone() const override;
+    std::string getStrategyName() const override;
+    
+    friend std::ostream& operator<<(std::ostream& os, const NeutralPlayerStrategy& strategy);
 };
 
 #endif 

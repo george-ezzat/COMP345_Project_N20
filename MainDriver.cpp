@@ -16,6 +16,7 @@ void testStartupPhase();
 void testMainGameLoop();
 void testLoggingObserver();
 void testTournament();
+void testPlayerStrategies();
 
 #define MAIN_DRIVER_INCLUDED
 
@@ -26,6 +27,7 @@ void testTournament();
 #include "Game_Engine/GameEngineDriver.cpp"
 #include "Logging/LoggingObserverDriver.cpp"
 #include "Tournement_mode/TournamentDriver.cpp"
+#include "PlayerStrategy/PlayerStrategiesDriver.cpp"
 
 int main(int argc, char* argv[]) {
     if (argc > 1 && std::string(argv[1]) == "-test") {
@@ -91,6 +93,13 @@ int main(int argc, char* argv[]) {
         }
 
         // A3 tests
+        std::cout << "\n--- Player Strategies ---" << std::endl;
+        try {
+            testPlayerStrategies();
+        } catch (const std::exception& e) {
+            std::cout << "Player Strategies test failed: " << e.what() << std::endl;
+        }
+
         std::cout << "\n--- Testing Tournament Mode ---" << std::endl;
         try {
             testTournament();
@@ -101,6 +110,6 @@ int main(int argc, char* argv[]) {
         std::cout << "\n==================== ALL TESTS COMPLETE ====================" << std::endl;
     }
 
-    std::cout << "Program running without -test. Nothing to do." << std::endl;
+    std::cout << "Program running in Game mode." << std::endl;
     return 0;
 }
