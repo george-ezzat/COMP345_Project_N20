@@ -713,8 +713,8 @@ std::string GameEngine::playSingleGameOnMap(Map* map, const std::vector<std::str
             strat = new BenevolentPlayerStrategy(player);
         } else if (strategies[i] == "Human") {
             strat = new HumanPlayerStrategy(player);
-        } else if (strategies[i] == "Random") {
-            strat = new RandomPlayerStrategy(player);
+        } else if (strategies[i] == "Neutral") {
+            strat = new NeutralPlayerStrategy(player);
         } else if (strategies[i] == "Cheater") {
             strat = new CheaterPlayerStrategy(player);
         }
