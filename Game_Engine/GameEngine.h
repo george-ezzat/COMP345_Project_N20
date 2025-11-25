@@ -12,6 +12,17 @@ class Map;
 class Player;
 namespace WarzoneCard { class Deck; }
 
+struct TournamentParameters {
+    std::vector<std::string> mapFiles;
+    std::vector<std::string> playerStrategies;
+    int numberOfGames;
+    int maxTurns;
+};
+
+struct TournamentResults {
+    std::vector<std::vector<std::string>> results;
+};
+
 class GameEngine : public Subject, public ILoggable {
 private:
     std::string* states;
@@ -50,6 +61,10 @@ public:
     std::vector<Player*>* getPlayers() { return players; }
     Map* getMap() { return gameMap; }
     WarzoneCard::Deck* getDeck() { return gameDeck; }
+
+    // ------------------- A3-P2: Tournament Mode -------------------
+    void executeTournament(const TournamentParameters& params);
+    std::string playSingleGameOnMap(Map* map, const std::vector<std::string>& strategies, int maxTurns);
 };
 
 #endif
