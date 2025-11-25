@@ -125,4 +125,47 @@ public:
     std::string getStrategyName() const override;
 };
 
+
+// Benevolent Player Strategy that focuses on defense and protecting weak territories
+
+class BenevolentPlayerStrategy : public PlayerStrategy {
+public:
+    BenevolentPlayerStrategy();
+    BenevolentPlayerStrategy(Player* p);
+    BenevolentPlayerStrategy(const BenevolentPlayerStrategy& other);
+    BenevolentPlayerStrategy& operator=(const BenevolentPlayerStrategy& other);
+    ~BenevolentPlayerStrategy() override;
+
+    std::vector<Territory*>* toDefend() override;
+    std::vector<Territory*>* toAttack() override;
+    void issueOrder() override;
+    PlayerStrategy* clone() const override;
+    std::string getStrategyName() const override;
+    
+    friend std::ostream& operator<<(std::ostream& os, const BenevolentPlayerStrategy& strategy);
+};
+
+
+// Neutral Player Strategy that does nothing unless attacked
+
+class NeutralPlayerStrategy : public PlayerStrategy {
+private:
+    int* previousTerritoryCount;
+
+public:
+    NeutralPlayerStrategy();
+    NeutralPlayerStrategy(Player* p);
+    NeutralPlayerStrategy(const NeutralPlayerStrategy& other);
+    NeutralPlayerStrategy& operator=(const NeutralPlayerStrategy& other);
+    ~NeutralPlayerStrategy() override;
+
+    std::vector<Territory*>* toDefend() override;
+    std::vector<Territory*>* toAttack() override;
+    void issueOrder() override;
+    PlayerStrategy* clone() const override;
+    std::string getStrategyName() const override;
+    
+    friend std::ostream& operator<<(std::ostream& os, const NeutralPlayerStrategy& strategy);
+};
+
 #endif 
