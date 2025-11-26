@@ -736,17 +736,8 @@ void BenevolentPlayerStrategy::issueOrder() {
     if (!player->getTerritories()->empty()) {
         std::vector<Territory*>* territories = player->getTerritories();
         
+        // Find weakest owned territory with < 3 armies
         Territory* weakest = nullptr;
-        Territory* stronger = nullptr;
-        
-        for (Territory* t : *territories) {
-            if (t->getArmies() > 1) {
-                if (stronger == nullptr || t->getArmies() > stronger->getArmies()) {
-                    stronger = t;
-                }
-            }
-        }
-        
         for (Territory* t : *territories) {
             if (t->getArmies() < 3) {
                 if (weakest == nullptr || t->getArmies() < weakest->getArmies()) {
@@ -755,15 +746,27 @@ void BenevolentPlayerStrategy::issueOrder() {
             }
         }
         
-        if (stronger != nullptr && weakest != nullptr && stronger != weakest) {
-            int armiesToMove = std::min(stronger->getArmies() - 1, 3 - weakest->getArmies());
-            if (armiesToMove > 0) {
-                Advance* advanceOrder = new Advance(armiesToMove, stronger, weakest, player);
-                player->getOrdersList()->add(advanceOrder);
-                std::cout << player->getName() << " (Benevolent) advancing " << armiesToMove 
-                          << " armies from " << stronger->getName() << " to reinforce " 
-                          << weakest->getName() << std::endl;
-                return;
+        // If we have a weak territory, find an adjacent stronger owned territory
+        if (weakest != nullptr) {
+            Territory* adjacentStronger = nullptr;
+            for (Territory* adj : weakest->getAdjacents()) {
+                if (adj->getOwner() == player && adj->getArmies() > 1) {
+                    if (adjacentStronger == nullptr || adj->getArmies() > adjacentStronger->getArmies()) {
+                        adjacentStronger = adj;
+                    }
+                }
+            }
+            
+            if (adjacentStronger != nullptr) {
+                int armiesToMove = std::min(adjacentStronger->getArmies() - 1, 3 - weakest->getArmies());
+                if (armiesToMove > 0) {
+                    Advance* advanceOrder = new Advance(armiesToMove, adjacentStronger, weakest, player);
+                    player->getOrdersList()->add(advanceOrder);
+                    std::cout << player->getName() << " (Benevolent) advancing " << armiesToMove 
+                              << " armies from " << adjacentStronger->getName() << " to reinforce " 
+                              << weakest->getName() << std::endl;
+                    return;
+                }
             }
         }
     }

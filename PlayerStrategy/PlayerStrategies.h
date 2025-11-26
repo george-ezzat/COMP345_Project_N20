@@ -168,4 +168,7 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const NeutralPlayerStrategy& strategy);
 };
 
+// Resets the cheater turn state at the end of each turn (call at start of new turn)
+void resetCheaterTurnState();
+
 #endif 

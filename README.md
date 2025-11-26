@@ -10,7 +10,7 @@ Compile the code using the following command:
 
 ### For VSCode:
 ```
-g++ -o MainDriver.exe MainDriver.cpp Cards/Cards.cpp Orders/Orders.cpp Player/Player.cpp Map/Map.cpp Game_Engine/GameEngine.cpp Logging/LoggingObserver.cpp Command_processing/CommandProcessing.cpp
+g++ -o MainDriver.exe MainDriver.cpp Cards/Cards.cpp Orders/Orders.cpp Player/Player.cpp Map/Map.cpp Game_Engine/GameEngine.cpp Logging/LoggingObserver.cpp Command_processing/CommandProcessing.cpp PlayerStrategy/PlayerStrategies.cpp
 ```
 ### For Visual Studio
 ```

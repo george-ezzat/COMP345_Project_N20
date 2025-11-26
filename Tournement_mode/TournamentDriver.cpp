@@ -7,9 +7,9 @@ void testTournament() {
     std::cout << "=== TESTING TOURNAMENT MODE ===\n";
 
     TournamentParameters params;
-    params.mapFiles = {"Map/Asia.map", "Map/canada.map", "Map/Europe.map" , "Map/invalid.map"};
-    params.playerStrategies = {"Human","Aggressive", "Benevolent", "Neutral", "Cheater"};
-    params.numberOfGames = 4;
+    params.mapFiles = {"Map/Asia.map", "Map/canada.map", "Map/Europe.map"};
+    params.playerStrategies = {"aggressive", "benevolent", "neutral", "cheater"};
+    params.numberOfGames = 3;
     params.maxTurns = 30;
 
     // Create GameEngine instance and Execute the tournament
