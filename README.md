@@ -1,136 +1,131 @@
 # COMP345_Project_N20
 
+## Build Commands
 
+### Compile All Drivers
 
-# Running the Program
+```bash
+# Cards Driver
+g++ -o CardsDriver.exe Cards/CardsDriver.cpp Cards/Cards.cpp
 
-## Compilation
+# Command Processing Driver
+g++ -o CommandProcessingDriver.exe Command_processing/CommandProcessingDriver.cpp Command_processing/CommandProcessing.cpp Game_Engine/GameEngine.cpp Map/Map.cpp Player/Player.cpp Orders/Orders.cpp Cards/Cards.cpp Logging/LoggingObserver.cpp PlayerStrategy/PlayerStrategies.cpp
 
-Compile the code using the following command:
+# Game Engine Driver
+g++ -o GameEngineDriver.exe Game_Engine/GameEngineDriver.cpp Game_Engine/GameEngine.cpp Command_processing/CommandProcessing.cpp Map/Map.cpp Player/Player.cpp Orders/Orders.cpp Cards/Cards.cpp Logging/LoggingObserver.cpp PlayerStrategy/PlayerStrategies.cpp
 
-### For VSCode:
-```
+# Logging Observer Driver
+g++ -o LoggingObserverDriver.exe Logging/LoggingObserverDriver.cpp Logging/LoggingObserver.cpp Game_Engine/GameEngine.cpp Command_processing/CommandProcessing.cpp Orders/Orders.cpp Cards/Cards.cpp Map/Map.cpp Player/Player.cpp PlayerStrategy/PlayerStrategies.cpp
+
+# Map Driver
+g++ -o MapDriver.exe Map/MapDriver.cpp Map/Map.cpp
+
+# Orders Driver
+g++ -o OrdersDriver.exe Orders/OrdersDriver.cpp Orders/Orders.cpp Player/Player.cpp Map/Map.cpp Cards/Cards.cpp Logging/LoggingObserver.cpp Game_Engine/GameEngine.cpp Command_processing/CommandProcessing.cpp PlayerStrategy/PlayerStrategies.cpp
+
+# Player Driver
+g++ -o PlayerDriver.exe Player/PlayerDriver.cpp Player/Player.cpp Map/Map.cpp Orders/Orders.cpp Cards/Cards.cpp Logging/LoggingObserver.cpp Game_Engine/GameEngine.cpp Command_processing/CommandProcessing.cpp PlayerStrategy/PlayerStrategies.cpp
+
+# Player Strategies Driver
+g++ -o PlayerStrategiesDriver.exe PlayerStrategy/PlayerStrategiesDriver.cpp PlayerStrategy/PlayerStrategies.cpp Player/Player.cpp Map/Map.cpp Orders/Orders.cpp Cards/Cards.cpp Logging/LoggingObserver.cpp Game_Engine/GameEngine.cpp Command_processing/CommandProcessing.cpp
+
+# Tournament Driver
+g++ -o TournamentDriver.exe Tournement_mode/TournamentDriver.cpp Game_Engine/GameEngine.cpp Command_processing/CommandProcessing.cpp Map/Map.cpp Player/Player.cpp Orders/Orders.cpp Cards/Cards.cpp Logging/LoggingObserver.cpp PlayerStrategy/PlayerStrategies.cpp
+
+# Main Driver (Full Project)
 g++ -o MainDriver.exe MainDriver.cpp Cards/Cards.cpp Orders/Orders.cpp Player/Player.cpp Map/Map.cpp Game_Engine/GameEngine.cpp Logging/LoggingObserver.cpp Command_processing/CommandProcessing.cpp PlayerStrategy/PlayerStrategies.cpp
 ```
-### For Visual Studio
+
+### Run Individual Drivers
+
+```bash
+.\CardsDriver.exe
+.\CommandProcessingDriver.exe
+.\GameEngineDriver.exe
+.\LoggingObserverDriver.exe
+.\MapDriver.exe
+.\OrdersDriver.exe
+.\PlayerDriver.exe
+.\PlayerStrategiesDriver.exe
+.\TournamentDriver.exe
+.\MainDriver.exe
 ```
-cl -o MainDriver.exe MainDriver.cpp Cards/Cards.cpp Orders/Orders.cpp Player/Player.cpp Map/Map.cpp Game_Engine/GameEngine.cpp Logging/LoggingObserver.cpp Command_processing/CommandProcessing.cpp
-```
 
-## Execution
+## Starting a Game
 
-Run the compiled executable:
+### Game Startup Commands
 
-```
-./MainDriver.exe
-```
+To start a game, execute the following commands in sequence:
 
-## Assignment 2: Game Startup Phase
-
-The `testStartupPhase()` function demonstrates the game startup phase implementation. 
-
-When running the test, you can choose between:
-- **Console Input**: Interactive command entry
-- **File Input**: Commands read from `startup_commands.txt`
-
-### Startup Phase Commands
-
-**1. Load a map** (transitions to Map Loaded state):
 ```
 loadmap Map/Asia.map
-```
-
-**2. Validate the map** (transitions to Map Validated state):
-```
 validatemap
-```
-
-**3. Add players** (2-6 players required):
-```
 addplayer Alice
 addplayer Bob
 addplayer Charlie
-```
-
-**4. Start the game**:
-```
 gamestart
 ```
 
-The `gamestart` command performs the following actions:
-- **4a)** Fairly distributes all territories to players
-- **4b)** Randomly determines the order of play
-- **4c)** Gives each player 50 initial army units in their reinforcement pool
-- **4d)** Gives each player 2 initial cards from the deck
-- **4e)** Switches the game to the play phase (assign reinforcement state)
+**Command Explanation:**
+- `loadmap` - Loads a map file from the Map directory
+- `validatemap` - Validates that the loaded map is a connected graph
+- `addplayer` - Adds players (minimum 2, maximum 6)
+- `gamestart` - Distributes territories, determines play order, gives initial armies (50) and cards (2) to each player
 
-Type `help` at any time during the startup phase to see available commands.
+## Playing One Round (Test Commands)
 
-## Game Engine Test
-
-The first test that runs is the game engine test. You'll need to enter commands to transition between game states.
-
-### State Transitions
-
-The game starts in the **Start** state. Follow these commands in order:
-
-**1. Load a map** (transitions to Map Loaded state):
+After starting the game, test one round with these commands:
 
 ```
-loadmap Map/Asia.map
-```
-
-Replace `Asia.map` with your desired map file from the `Map/` directory.
-
-**2. Validate the map**:
-
-```
-validatemap
-```
-
-**3. Add players**:
-
-```
-addplayer Player1
-addplayer Player2
-```
-
-Add as many players as needed.
-
-**4. Assign countries**:
-
-```
-assigncountries
-```
-
-> **Note:** This command doesn't perform much functionality yet, as it wasn't part of the current assignment.
-
-**5. Issue orders**:
-
-```
-issueorder
-```
-
-**6. End issuing orders**:
-
-```
-endissueorders
-```
-
-**7. Execute orders**:
-
-```
+deploy <territory_index> <armies>
+advance <source_territory> <target_territory> <armies>
+card <card_type>
+done
 execorder
 ```
 
-**8. Win condition**:
+**Command Explanation:**
+- `deploy <territory_index> <armies>` - Deploy armies to a territory you own
+- `advance <source_territory> <target_territory> <armies>` - Move/attack with armies
+- `card <card_type>` - Play a card from hand (card types: bomb, reinforcement, blockade, airlift, diplomacy)
+- `done` - Finish issuing orders for current player (use for each player)
+- `execorder` - Executes all issued orders
+
+
+## Tournament Mode
+
+### Start Tournament
+
+To run a tournament, use the `tournament` command with the following parameters:
 
 ```
-win
+tournament -M europe.map asia.map -P aggressive benevolent -G 3 -D 25
 ```
 
-**9. End game**:
-
+**Tournament Command Format:**
 ```
-end
+tournament -M <mapfiles> -P <playerstratgies> -G <numberofgames> -D <maxnumberofturns>
+```
+
+**Parameters:**
+- `-M` - List of map files (1-5 maps)
+- `-P` - List of player strategies (2-4 strategies): aggressive, benevolent, neutral, cheater
+- `-G` - Number of games per map (1-5)
+- `-D` - Maximum number of turns per game (10-50)
+
+### Tournament Example Commands
+
+**Minimum parameters:**
+```
+tournament -M world.map -P aggressive benevolent -G 1 -D 10
+```
+
+**Three maps with three strategies:**
+```
+tournament -M europe.map asia.map africa.map -P aggressive benevolent neutral -G 2 -D 30
+```
+
+**Maximum parameters:**
+```
+tournament -M map1.map map2.map map3.map map4.map map5.map -P aggressive benevolent neutral cheater -G 5 -D 50
 ```
