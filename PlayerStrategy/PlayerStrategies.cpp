@@ -57,16 +57,21 @@ std::ostream& operator<<(std::ostream& os, const PlayerStrategy& strategy) {
 }
 
 // Human player strategy implementation
+// Requires user input for all decisions (toDefend, toAttack, issueOrder)
 
+// Default constructor
 HumanPlayerStrategy::HumanPlayerStrategy() : PlayerStrategy() {
 }
 
+// Constructor with player
 HumanPlayerStrategy::HumanPlayerStrategy(Player* p) : PlayerStrategy(p) {
 }
 
+// Copy constructor
 HumanPlayerStrategy::HumanPlayerStrategy(const HumanPlayerStrategy& other) : PlayerStrategy(other) {
 }
 
+// Assignment operator
 HumanPlayerStrategy& HumanPlayerStrategy::operator=(const HumanPlayerStrategy& other) {
     if (this != &other) {
         PlayerStrategy::operator=(other);
@@ -74,9 +79,11 @@ HumanPlayerStrategy& HumanPlayerStrategy::operator=(const HumanPlayerStrategy& o
     return *this;
 }
 
+// Destructor
 HumanPlayerStrategy::~HumanPlayerStrategy() {
 }
 
+// Prompts user to select territories to defend via console input
 std::vector<Territory*>* HumanPlayerStrategy::toDefend() {
     if (!player || !player->getTerritories() || player->getTerritories()->empty()) {
         return new std::vector<Territory*>();
@@ -118,6 +125,7 @@ std::vector<Territory*>* HumanPlayerStrategy::toDefend() {
     return selected;
 }
 
+// Prompts user to select enemy territories to attack via console input
 std::vector<Territory*>* HumanPlayerStrategy::toAttack() {
     if (!player || !player->getTerritories() || player->getTerritories()->empty()) {
         return new std::vector<Territory*>();
@@ -181,11 +189,13 @@ std::vector<Territory*>* HumanPlayerStrategy::toAttack() {
     return selected;
 }
 
+// Interactive order issuing - prompts user for deploy, advance, card, or done commands
 void HumanPlayerStrategy::issueOrder() {
     if (!player) {
         return;
     }
     
+    // Display available commands to the user
     std::cout << "\n=== " << player->getName() << " (Human) - Issue Order ===" << std::endl;
     std::cout << "Available commands:" << std::endl;
     std::cout << "1. deploy <territory_index> <armies> - Deploy armies" << std::endl;
@@ -193,6 +203,7 @@ void HumanPlayerStrategy::issueOrder() {
     std::cout << "3. card - Play a card" << std::endl;
     std::cout << "4. done - Finish issuing orders" << std::endl;
     
+    // Main command loop - keeps asking for commands until user enters 'done'
     while (true) {
         std::cout << "\nReinforcement Pool: " << player->getReinforcementPool() << std::endl;
         std::string command;
@@ -205,15 +216,18 @@ void HumanPlayerStrategy::issueOrder() {
         trimmed.erase(trimmed.find_last_not_of(" \t") + 1);
         std::transform(trimmed.begin(), trimmed.end(), trimmed.begin(), ::tolower);
         
+        // Exit loop when user is done issuing orders
         if (trimmed == "done") {
             std::cout << "Finished issuing orders." << std::endl;
             break;
         }
         
+        // Parse the command
         std::istringstream iss(command);
         std::string cmd;
         iss >> cmd;
         
+        // Handle deploy command to place reinforcements on a territory
         if (cmd == "deploy") {
             int terrIndex, armies;
             if (iss >> terrIndex >> armies) {
@@ -235,7 +249,9 @@ void HumanPlayerStrategy::issueOrder() {
             } else {
                 std::cout << "Invalid deploy command. Use: deploy <territory_index> <armies>" << std::endl;
             }
-        } else if (cmd == "advance") {
+        } 
+        // Handle advance command to move armies between territories (attack or reinforce)
+        else if (cmd == "advance") {
             int sourceIndex, destIndex, armies;
             if (iss >> sourceIndex >> destIndex >> armies) {
                 std::vector<Territory*>* territories = player->getTerritories();
@@ -310,7 +326,9 @@ void HumanPlayerStrategy::issueOrder() {
             } else {
                 std::cout << "Invalid advance command. Use: advance <source_index> <dest_index> <armies>" << std::endl;
             }
-        } else if (cmd == "card") {
+        } 
+        // Handle card command to play a card from hand
+        else if (cmd == "card") {
             if (player->getHand() && !player->getHand()->getHandCards().empty()) {
                 const std::vector<WarzoneCard::Card*>& cards = player->getHand()->getHandCards();
                 std::cout << "Available cards:" << std::endl;
@@ -337,25 +355,32 @@ void HumanPlayerStrategy::issueOrder() {
     } // end while loop
 }
 
+// Creates a copy of this strategy
 PlayerStrategy* HumanPlayerStrategy::clone() const {
     return new HumanPlayerStrategy(*this);
 }
 
+// Returns strategy name
 std::string HumanPlayerStrategy::getStrategyName() const {
     return "Human";
 }
 
 // Aggressive player strategy
+// Computer player that focuses on attack - deploys on strongest, always advances to attack enemies
 
+// Default constructor
 AggressivePlayerStrategy::AggressivePlayerStrategy() : PlayerStrategy() {
 }
 
+// Constructor with player
 AggressivePlayerStrategy::AggressivePlayerStrategy(Player* p) : PlayerStrategy(p) {
 }
 
+// Copy constructor
 AggressivePlayerStrategy::AggressivePlayerStrategy(const AggressivePlayerStrategy& other) : PlayerStrategy(other) {
 }
 
+// Assignment operator
 AggressivePlayerStrategy& AggressivePlayerStrategy::operator=(const AggressivePlayerStrategy& other) {
     if (this != &other) {
         PlayerStrategy::operator=(other);
@@ -363,9 +388,11 @@ AggressivePlayerStrategy& AggressivePlayerStrategy::operator=(const AggressivePl
     return *this;
 }
 
+// Destructor
 AggressivePlayerStrategy::~AggressivePlayerStrategy() {
 }
 
+// Returns only the strongest territory (most armies) to defend
 std::vector<Territory*>* AggressivePlayerStrategy::toDefend() {
     if (!player || !player->getTerritories() || player->getTerritories()->empty()) {
         return new std::vector<Territory*>();
@@ -391,6 +418,7 @@ std::vector<Territory*>* AggressivePlayerStrategy::toDefend() {
     return defendList;
 }
 
+// Returns all adjacent enemy territories as attack targets
 std::vector<Territory*>* AggressivePlayerStrategy::toAttack() {
     if (!player || !player->getTerritories() || player->getTerritories()->empty()) {
         return new std::vector<Territory*>();
@@ -414,12 +442,13 @@ std::vector<Territory*>* AggressivePlayerStrategy::toAttack() {
     return attackList;
 }
 
+// Automatically issues orders: deploys on strongest, then advances to attack until no armies left
 void AggressivePlayerStrategy::issueOrder() {
     if (!player) {
         return;
     }
     
-    //Deploy all reinforcements on strongest territory
+    // Deploy all reinforcements on strongest territory
     bool deployed = false;
     if (player->getReinforcementPool() > 0 && !player->getTerritories()->empty()) {
         std::vector<Territory*>* territories = player->getTerritories();
@@ -505,10 +534,12 @@ void AggressivePlayerStrategy::issueOrder() {
     std::cout << player->getName() << " (Aggressive) has no more orders to issue" << std::endl;
 }
 
+// Creates a copy of this strategy
 PlayerStrategy* AggressivePlayerStrategy::clone() const {
     return new AggressivePlayerStrategy(*this);
 }
 
+// Returns strategy name
 std::string AggressivePlayerStrategy::getStrategyName() const {
     return "Aggressive";
 }
