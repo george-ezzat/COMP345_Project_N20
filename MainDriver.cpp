@@ -109,7 +109,8 @@ int main(int argc, char* argv[]) {
 
         std::cout << "\n==================== ALL TESTS COMPLETE ====================" << std::endl;
     }
-
-    std::cout << "Program running in Game mode." << std::endl;
+    else{
+        std::cout << "Program running in Game mode." << std::endl;
+    }
     return 0;
 }
